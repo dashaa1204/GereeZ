@@ -1,5 +1,5 @@
 -- ============================================================
--- RentHelper: FULL DATABASE SETUP
+-- Gereez: FULL DATABASE SETUP
 -- Copy ALL of this file into Supabase → SQL Editor → Run
 -- ============================================================
 

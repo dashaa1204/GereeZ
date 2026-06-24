@@ -1,4 +1,4 @@
--- RentHelper: switch embeddings to Google Gemini text-embedding-004 (768 dims)
+-- Gereez: switch embeddings to Google Gemini text-embedding-004 (768 dims)
 -- Run in Supabase SQL Editor if you already ran the 1536-dim setup
 
 drop function if exists public.match_legal_documents;

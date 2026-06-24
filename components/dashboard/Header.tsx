@@ -7,7 +7,7 @@ export function Header() {
         <div className="flex size-8 items-center justify-center rounded-lg bg-navy text-white">
           <Home className="size-4" />
         </div>
-        <span className="text-lg font-semibold text-navy">RentHelper</span>
+        <span className="text-lg font-semibold text-navy">GereeZ</span>
       </div>
     </header>
   );

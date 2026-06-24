@@ -1,4 +1,4 @@
--- RentHelper RAG: pgvector + legal documents knowledge base
+-- Gereez RAG: pgvector + legal documents knowledge base
 -- Run in Supabase SQL Editor after 001_contracts.sql
 
 create extension if not exists vector with schema extensions;

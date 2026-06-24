@@ -1,4 +1,4 @@
--- RentHelper: contracts table + storage bucket
+-- Gereez: contracts table + storage bucket
 -- Run this in the Supabase SQL Editor (Dashboard → SQL → New query)
 
 create table if not exists public.contracts (
