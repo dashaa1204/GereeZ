@@ -1,6 +1,6 @@
 # GereeZ
 
-**Гэрээгээ бүрэн уншаагүй ч болно — GereeZ таны өмнөөс шалгаад, эрсдэлийг ойлгомжтой харуулна.**
+**Гэрээгээ бүрэн уншиж амжаагүй юу? Зүгээрээ — GereeZ таны өмнөөс шалгаад, эрсдэлийг ойлгомжтой харуулна.**
 
 AI-powered contract compliance platform for Mongolia. Upload a PDF agreement, get a legal score, and plain-language alerts grounded in Mongolian law.
 
