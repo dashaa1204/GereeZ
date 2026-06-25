@@ -33,7 +33,7 @@ const DEFAULT_LAW_NAME = "Иргэний хууль";
 function buildChunkEmbeddingText(chunk: LegalChunk, lawName: string): string {
   const header = [
     lawName,
-    chunk.articleNumber ? `Article ${chunk.articleNumber}` : null,
+    chunk.articleNumber ? `${chunk.articleNumber} дүгээр зүйл` : null,
     chunk.sectionTitle,
   ]
     .filter(Boolean)
@@ -196,9 +196,9 @@ function buildContractSearchQueries(contractText: string): string[] {
   const keywords = extractTenancyKeywords(contractText);
 
   return [
-    `Mongolian rental tenancy agreement ${keywords}: ${excerpt.slice(0, 2_000)}`,
-    `Lease termination eviction security deposit rent payment obligations: ${keywords}`,
-    `Түрээсийн гэрээ түрээслүүлэгч түрээслэгч эрх үүрэг: ${excerpt.slice(2_000, 5_000)}`,
+    `Түрээсийн гэрээ хуулийн нийцэл ${keywords}: ${excerpt.slice(0, 2_000)}`,
+    `Түрээс цуцлах барьцаа төлбөр эрх үүрэг: ${keywords}`,
+    `Иргэний хууль түрээсийн гэрээ: ${excerpt.slice(2_000, 5_000)}`,
   ];
 }
 
@@ -221,7 +221,7 @@ function extractTenancyKeywords(text: string): string {
 
   const lower = text.toLowerCase();
   const found = keywords.filter((keyword) => lower.includes(keyword));
-  return found.length > 0 ? found.join(", ") : "түрээс rent deposit termination";
+  return found.length > 0 ? found.join(", ") : "түрээс, барьцаа, төлбөр, цуцлах";
 }
 
 export function formatLegalContext(matches: LegalDocumentMatch[]): string {
@@ -233,13 +233,13 @@ export function formatLegalContext(matches: LegalDocumentMatch[]): string {
     .map((match, index) => {
       const citation = [
         match.law_name,
-        match.article_number ? `Article ${match.article_number}` : null,
+        match.article_number ? `${match.article_number} дүгээр зүйл` : null,
         match.section_title,
       ]
         .filter(Boolean)
         .join(" — ");
 
-      return `[Authority ${index + 1}] ${citation} (relevance: ${(match.similarity * 100).toFixed(1)}%)\n${match.content}`;
+      return `[Эх сурвалж ${index + 1}] ${citation} (тохирол: ${(match.similarity * 100).toFixed(1)}%)\n${match.content}`;
     })
     .join("\n\n---\n\n");
 }

@@ -21,6 +21,8 @@ export interface AuditSummary {
   summary: string;
   alerts: AuditAlert[];
   strengths: string[];
+  contentHash?: string;
+  cachedFromPriorAudit?: boolean;
   retrievedArticles?: RetrievedArticle[];
   demoMode?: boolean;
 }

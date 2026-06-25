@@ -8,6 +8,7 @@ import {
   retrieveLegalContextByKeywords,
 } from "@/lib/vector-store";
 import { buildRAGSystemPrompt } from "./prompt";
+import { normalizeAuditResult } from "./normalize";
 import {
   auditResultSchema,
   type AnalyzeContractResult,
@@ -43,7 +44,7 @@ export async function analyzeContractText(
 
   if (!contractText || contractText.length < 50) {
     throw new Error(
-      "Could not extract enough text from the PDF. Ensure the file is a text-based PDF, not a scanned image.",
+      "PDF-ээс хангалттай текст гаргаж чадсангүй. Сканнердсан зураг биш, тексттэй PDF ашиглана уу.",
     );
   }
 
@@ -51,7 +52,7 @@ export async function analyzeContractText(
 
   const truncated =
     contractText.length > 80_000
-      ? `${contractText.slice(0, 80_000)}\n\n[Document truncated for analysis]`
+      ? `${contractText.slice(0, 80_000)}\n\n[Шинжилгээний хэмжээнд тасалсан]`
       : contractText;
 
   const provider = getAuditProvider();
@@ -68,7 +69,7 @@ export async function analyzeContractText(
   );
 
   return {
-    ...object,
+    ...normalizeAuditResult(object),
     retrievedContext: legalContext,
   };
 }
@@ -99,7 +100,7 @@ function trimAuditContext(
 
   const contractTextTrimmed =
     contractText.length > GROQ_MAX_CONTRACT_CHARS
-      ? `${contractText.slice(0, GROQ_MAX_CONTRACT_CHARS)}\n\n[Contract truncated for API limits]`
+      ? `${contractText.slice(0, GROQ_MAX_CONTRACT_CHARS)}\n\n[API хязгаарын улмаас тасалсан]`
       : contractText;
 
   return { contractText: contractTextTrimmed, legalContext };
@@ -141,6 +142,7 @@ async function generateAuditWithRetry(
       const { object } = await generateObject({
         model: getAuditModel(),
         schema: auditResultSchema,
+        temperature: 0,
         ...(provider === "google"
           ? {
               providerOptions: {
