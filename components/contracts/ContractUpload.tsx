@@ -1,15 +1,20 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence } from "motion/react";
 import {
   AlertTriangle,
   BrainCircuit,
   CloudUpload,
   FileText,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ProgressRing } from "@/components/ui/ProgressRing";
+import { SettleIn, StaggerItem, StaggerList } from "@/components/ui/SettleIn";
+import { useAnimatedProgress } from "@/lib/hooks/useAnimatedProgress";
+import { useCountUp } from "@/lib/hooks/useCountUp";
+import { triggerHaptic } from "@/lib/hooks/useHaptic";
 import {
   auditContract,
   uploadContract,
@@ -26,30 +31,114 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 type UploadState = "idle" | "uploading" | "auditing" | "success" | "error";
 
+function progressTarget(state: UploadState): number {
+  switch (state) {
+    case "uploading":
+      return 35;
+    case "auditing":
+      return 95;
+    case "success":
+      return 100;
+    default:
+      return 0;
+  }
+}
+
+function progressDuration(state: UploadState): number {
+  switch (state) {
+    case "uploading":
+      return 700;
+    case "auditing":
+      return 1400;
+    case "success":
+      return 350;
+    default:
+      return 400;
+  }
+}
+
+function phaseLabel(state: UploadState): string {
+  switch (state) {
+    case "uploading":
+      return "Хадгалж байна…";
+    case "auditing":
+      return "AI хуулийн шинжилгээ хийж байна…";
+    case "success":
+      return "Бэлэн";
+    default:
+      return "";
+  }
+}
+
+function ComplianceScoreBadge({
+  score,
+  visible,
+}: {
+  score: number;
+  visible: boolean;
+}) {
+  const display = useCountUp(score, 600, visible);
+  return (
+    <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-sm font-bold tabular-nums text-success">
+      {display}/100
+    </span>
+  );
+}
+
 export default function ContractUpload() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const hapticFiredRef = useRef(false);
   const [state, setState] = useState<UploadState>("idle");
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AuditResult | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [shake, setShake] = useState(false);
+
+  const target = progressTarget(state);
+  const duration = progressDuration(state);
+  const progress = useAnimatedProgress(target, duration);
+  const isBusy = state === "uploading" || state === "auditing";
+  const ringComplete = state === "success" && progress >= 100;
+
+  useEffect(() => {
+    if (ringComplete && !hapticFiredRef.current) {
+      hapticFiredRef.current = true;
+      triggerHaptic("success");
+      const timer = setTimeout(() => {
+        setShowResults(true);
+        router.refresh();
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [ringComplete, router]);
 
   const processFile = useCallback(
     async (file: File) => {
       if (file.type !== "application/pdf") {
         setError("Зөвхөн PDF файл оруулна уу.");
         setState("error");
+        setShake(true);
+        triggerHaptic("error");
+        setTimeout(() => setShake(false), 300);
         return;
       }
 
       if (file.size > 10 * 1024 * 1024) {
         setError("Файл 10 MB-аас бага байх ёстой.");
         setState("error");
+        setShake(true);
+        triggerHaptic("error");
+        setTimeout(() => setShake(false), 300);
         return;
       }
 
       setError(null);
       setResult(null);
+      setShowResults(false);
+      hapticFiredRef.current = false;
+      triggerHaptic("light");
 
       try {
         setState("uploading");
@@ -59,13 +148,15 @@ export default function ContractUpload() {
         const audited = await auditContract(contract.id);
         setResult({ contract: audited });
         setState("success");
-        router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Алдаа гарлаа");
         setState("error");
+        setShake(true);
+        triggerHaptic("error");
+        setTimeout(() => setShake(false), 300);
       }
     },
-    [router],
+    [],
   );
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +172,7 @@ export default function ContractUpload() {
     if (file) void processFile(file);
   };
 
-  const isBusy = state === "uploading" || state === "auditing";
+  const showRing = isBusy || state === "success";
 
   return (
     <section className="rounded-xl border border-border bg-white p-4">
@@ -89,7 +180,7 @@ export default function ContractUpload() {
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-navy/10">
           <BrainCircuit className="size-5 text-navy" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="font-semibold">Гэрээ оруулах</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             PDF гэрээгээ оруулбал Иргэний хуулийн дагуу AI шинжилгээ хийгдэнэ.
@@ -113,35 +204,53 @@ export default function ContractUpload() {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         className={cn(
-          "mt-4 rounded-lg border-2 border-dashed p-6 text-center transition-colors",
-          dragOver ? "border-navy bg-navy/5" : "border-border bg-muted/30",
-          isBusy && "pointer-events-none opacity-60",
+          "mt-4 rounded-lg border-2 p-6 text-center transition-all duration-300",
+          showRing ? "border-solid" : "border-dashed",
+          state === "success"
+            ? "border-success/30 bg-success/5"
+            : dragOver
+              ? "scale-[0.998] border-navy bg-navy/5"
+              : "border-border bg-muted/30",
+          isBusy && "pointer-events-none",
+          shake && "animate-shake",
         )}
       >
-        <FileText className="mx-auto size-8 text-muted-foreground" />
-        <p className="mt-2 text-sm font-medium">
-          {isBusy ? "Боловсруулж байна…" : "PDF файлаа энд чирж тавина уу"}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {state === "uploading" && "Хадгалж байна…"}
-          {state === "auditing" && "AI хуулийн шинжилгээ хийж байна…"}
-          {state === "idle" && "эсвэл доорх товчоор сонгоно (10 MB хүртэл)"}
-          {state === "success" && "Амжилттай — доор үр дүн харагдана"}
-          {state === "error" && "Дахин оролдоно уу"}
-        </p>
+        <AnimatePresence mode="wait">
+          {showRing ? (
+            <SettleIn key="ring">
+              <ProgressRing
+                progress={progress}
+                complete={ringComplete}
+                size="sm"
+                label={phaseLabel(state)}
+              />
+            </SettleIn>
+          ) : (
+            <SettleIn key="drop">
+              <FileText className="mx-auto size-8 text-muted-foreground" />
+              <p className="mt-2 text-sm font-medium">
+                PDF файлаа энд чирж тавина уу
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {state === "idle" &&
+                  "эсвэл доорх товчоор сонгоно (10 MB хүртэл)"}
+                {state === "error" && "Дахин оролдоно уу"}
+              </p>
+            </SettleIn>
+          )}
+        </AnimatePresence>
       </div>
 
       <Button
         type="button"
         disabled={isBusy}
-        onClick={() => inputRef.current?.click()}
-        className="mt-4 h-11 w-full gap-2 rounded-lg bg-navy text-white hover:bg-navy/90"
+        onClick={() => {
+          triggerHaptic("light");
+          inputRef.current?.click();
+        }}
+        className="mt-4 h-11 w-full gap-2 rounded-lg bg-navy text-white hover:bg-navy/90 active:scale-[0.98]"
       >
-        {isBusy ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <CloudUpload className="size-4" />
-        )}
+        <CloudUpload className="size-4" />
         {state === "uploading"
           ? "Хадгалж байна…"
           : state === "auditing"
@@ -150,28 +259,37 @@ export default function ContractUpload() {
       </Button>
 
       {error && (
-        <p className="mt-3 flex items-start gap-2 text-xs text-destructive">
+        <SettleIn className="mt-3 flex items-start gap-2 text-xs text-destructive">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
           {error}
-        </p>
+        </SettleIn>
       )}
 
-      {result?.contract && state === "success" && (
-        <div className="mt-4 space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">{result.contract.file_name}</p>
-            <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-sm font-bold text-success">
-              {result.contract.compliance_score}/100
-            </span>
+      {result?.contract && showResults && (
+        <SettleIn className="mt-4 space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="truncate text-sm font-semibold">
+              {result.contract.file_name}
+            </p>
+            {result.contract.compliance_score != null && (
+              <ComplianceScoreBadge
+                score={result.contract.compliance_score}
+                visible={showResults}
+              />
+            )}
           </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {result.contract.audit_summary?.summary}
-          </p>
+          {result.contract.audit_summary?.summary && (
+            <SettleIn delay={0.08}>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {result.contract.audit_summary.summary}
+              </p>
+            </SettleIn>
+          )}
           {result.contract.audit_summary?.alerts &&
             result.contract.audit_summary.alerts.length > 0 && (
-              <ul className="space-y-2">
+              <StaggerList className="space-y-2">
                 {result.contract.audit_summary.alerts.map((alert) => (
-                  <li
+                  <StaggerItem
                     key={alert.title}
                     className="rounded-md border border-border bg-white px-3 py-2 text-xs"
                   >
@@ -189,11 +307,11 @@ export default function ContractUpload() {
                     <p className="mt-0.5 text-muted-foreground">
                       {alert.description}
                     </p>
-                  </li>
+                  </StaggerItem>
                 ))}
-              </ul>
+              </StaggerList>
             )}
-        </div>
+        </SettleIn>
       )}
     </section>
   );

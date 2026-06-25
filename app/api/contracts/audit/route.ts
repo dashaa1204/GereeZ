@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { analyzeContractText, extractPdfText } from "@/lib/audit";
+import { hashContractText } from "@/lib/audit/content-hash";
 import { formatUserError } from "@/lib/api-errors";
 import { generateDemoAudit, isDemoMode } from "@/lib/demo-audit";
+import type { AuditSummary } from "@/lib/types/contract";
 import { formatRetrievedArticlesForStorage } from "@/lib/vector-store";
 import { CONTRACTS_BUCKET, createAdminClient } from "@/lib/supabase-server";
 
@@ -59,18 +61,56 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await fileData.arrayBuffer());
     const contractText = await extractPdfText(buffer);
-    const audit = isDemoMode()
-      ? generateDemoAudit(contractText)
-      : await analyzeContractText(contractText);
+    const contentHash = hashContractText(contractText);
 
-    const auditSummary = {
+    let cachedFromPriorAudit = false;
+    let cachedSummary: AuditSummary | null = null;
+
+    let audit = isDemoMode()
+      ? generateDemoAudit(contractText)
+      : null;
+
+    if (!audit) {
+      const { data: cachedContract } = await supabase
+        .from("contracts")
+        .select("compliance_score, audit_summary")
+        .eq("status", "completed")
+        .neq("id", contractId)
+        .filter("audit_summary->>contentHash", "eq", contentHash)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      cachedSummary = cachedContract?.audit_summary as AuditSummary | null;
+
+      if (
+        cachedContract &&
+        cachedSummary?.alerts &&
+        cachedSummary.contentHash === contentHash
+      ) {
+        cachedFromPriorAudit = true;
+        audit = {
+          complianceScore: cachedContract.compliance_score ?? 0,
+          summary: cachedSummary.summary,
+          alerts: cachedSummary.alerts,
+          strengths: cachedSummary.strengths ?? [],
+          retrievedContext: { matches: [], contextText: "" },
+        };
+      } else {
+        audit = await analyzeContractText(contractText);
+      }
+    }
+
+    const auditSummary: AuditSummary = {
       summary: audit.summary,
       alerts: audit.alerts,
       strengths: audit.strengths,
-      retrievedArticles: formatRetrievedArticlesForStorage(
-        audit.retrievedContext.matches,
-      ),
+      contentHash,
+      retrievedArticles: cachedFromPriorAudit
+        ? (cachedSummary?.retrievedArticles ?? [])
+        : formatRetrievedArticlesForStorage(audit.retrievedContext.matches),
       demoMode: isDemoMode(),
+      ...(cachedFromPriorAudit ? { cachedFromPriorAudit: true } : {}),
     };
 
     const { data: updatedContract, error: updateError } = await supabase

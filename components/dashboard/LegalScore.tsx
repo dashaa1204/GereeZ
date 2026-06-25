@@ -1,3 +1,8 @@
+"use client";
+
+import { useCountUp } from "@/lib/hooks/useCountUp";
+import { cn } from "@/lib/utils";
+
 interface LegalScoreProps {
   score: number | null;
 }
@@ -22,9 +27,9 @@ function ringColor(score: number): string {
 
 export function LegalScore({ score }: LegalScoreProps) {
   const circumference = 2 * Math.PI * 54;
-  const displayScore = score ?? 0;
-  const offset = circumference - (displayScore / 100) * circumference;
   const hasData = score != null;
+  const displayScore = useCountUp(score ?? 0, 900, hasData);
+  const offset = circumference - (displayScore / 100) * circumference;
 
   return (
     <section className="rounded-xl bg-muted/60 px-6 py-8">
@@ -51,13 +56,13 @@ export function LegalScore({ score }: LegalScoreProps) {
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={offset}
-                className={`${ringColor(score)} transition-all duration-700`}
+                className={cn(ringColor(score), "transition-[stroke-dashoffset] duration-100 ease-out")}
               />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-bold text-foreground">
-              {hasData ? score : "—"}
+            <span className="text-4xl font-bold tabular-nums tracking-tight text-foreground">
+              {hasData ? displayScore : "—"}
             </span>
             <span className="text-[10px] font-semibold tracking-widest text-muted-foreground">
               ХУУЛИЙН ОНОО
@@ -65,10 +70,18 @@ export function LegalScore({ score }: LegalScoreProps) {
           </div>
         </div>
         <p
-          className={`mt-3 text-sm font-semibold ${hasData ? scoreColor(score) : "text-muted-foreground"}`}
+          className={cn(
+            "mt-3 text-sm font-semibold",
+            hasData ? scoreColor(score) : "text-muted-foreground",
+          )}
         >
           {hasData ? scoreLabel(score) : "Гэрээ оруулаад шинжилгээ хийлгэнэ үү"}
         </p>
+        {hasData && (
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Анхааруулгаас автоматаар тооцсон оноо
+          </p>
+        )}
       </div>
     </section>
   );
