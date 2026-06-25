@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "motion/react";
 import {
@@ -95,6 +96,7 @@ export default function ContractUpload() {
   const [result, setResult] = useState<AuditResult | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [shake, setShake] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
   const target = progressTarget(state);
   const duration = progressDuration(state);
@@ -114,8 +116,19 @@ export default function ContractUpload() {
     }
   }, [ringComplete, router]);
 
+  const requireConsent = useCallback(() => {
+    if (consentAccepted) return true;
+    setError("Гэрээ оруулахын өмнө доорх нөхцөлийг хүлээн зөвшөөрнө үү.");
+    setShake(true);
+    triggerHaptic("error");
+    setTimeout(() => setShake(false), 300);
+    return false;
+  }, [consentAccepted]);
+
   const processFile = useCallback(
     async (file: File) => {
+      if (!requireConsent()) return;
+
       if (file.type !== "application/pdf") {
         setError("Зөвхөн PDF файл оруулна уу.");
         setState("error");
@@ -156,7 +169,7 @@ export default function ContractUpload() {
         setTimeout(() => setShake(false), 300);
       }
     },
-    [],
+    [requireConsent],
   );
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,10 +209,60 @@ export default function ContractUpload() {
         onChange={handleFileChange}
       />
 
+      <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+        <input
+          type="checkbox"
+          checked={consentAccepted}
+          onChange={(e) => {
+            setConsentAccepted(e.target.checked);
+            if (e.target.checked) setError(null);
+          }}
+          disabled={isBusy}
+          className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border text-navy accent-navy focus:ring-navy/30 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        <p
+          className="cursor-pointer text-left text-[11px] leading-relaxed text-muted-foreground"
+          onClick={() => {
+            if (isBusy) return;
+            setConsentAccepted((value) => {
+              const next = !value;
+              if (next) setError(null);
+              return next;
+            });
+          }}
+        >
+          Би{" "}
+          <Link
+            href="/legal/disclaimer"
+            onClick={(e) => e.stopPropagation()}
+            className="font-medium text-navy underline-offset-2 hover:underline"
+          >
+            анхааруулга
+          </Link>
+          ,{" "}
+          <Link
+            href="/legal/privacy_policy"
+            onClick={(e) => e.stopPropagation()}
+            className="font-medium text-navy underline-offset-2 hover:underline"
+          >
+            нууцлалын бодлого
+          </Link>{" "}
+          болон{" "}
+          <Link
+            href="/legal/terms_of_service"
+            onClick={(e) => e.stopPropagation()}
+            className="font-medium text-navy underline-offset-2 hover:underline"
+          >
+            үйлчилгээний нөхцөл
+          </Link>
+          -ийг уншиж, хүлээн зөвшөөрч байна.
+        </p>
+      </div>
+
       <div
         onDragOver={(e) => {
           e.preventDefault();
-          setDragOver(true);
+          if (consentAccepted) setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
@@ -208,10 +271,10 @@ export default function ContractUpload() {
           showRing ? "border-solid" : "border-dashed",
           state === "success"
             ? "border-success/30 bg-success/5"
-            : dragOver
+            : dragOver && consentAccepted
               ? "scale-[0.998] border-navy bg-navy/5"
               : "border-border bg-muted/30",
-          isBusy && "pointer-events-none",
+          (isBusy || !consentAccepted) && "pointer-events-none opacity-60",
           shake && "animate-shake",
         )}
       >
@@ -233,7 +296,9 @@ export default function ContractUpload() {
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {state === "idle" &&
-                  "эсвэл доорх товчоор сонгоно (10 MB хүртэл)"}
+                  (consentAccepted
+                    ? "эсвэл доорх товчоор сонгоно (10 MB хүртэл)"
+                    : "Эхлээд дээрх нөхцөлийг зөвшөөрнө үү")}
                 {state === "error" && "Дахин оролдоно уу"}
               </p>
             </SettleIn>
@@ -243,8 +308,9 @@ export default function ContractUpload() {
 
       <Button
         type="button"
-        disabled={isBusy}
+        disabled={isBusy || !consentAccepted}
         onClick={() => {
+          if (!requireConsent()) return;
           triggerHaptic("light");
           inputRef.current?.click();
         }}
