@@ -14,21 +14,14 @@ import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { SettleIn, StaggerItem, StaggerList } from "@/components/ui/SettleIn";
 import { useAnimatedProgress } from "@/lib/hooks/useAnimatedProgress";
-import { useCountUp } from "@/lib/hooks/useCountUp";
 import { triggerHaptic } from "@/lib/hooks/useHaptic";
 import {
   auditContract,
   uploadContract,
 } from "@/lib/services/contracts.client";
+import { AnalysisResults } from "@/components/contracts/AnalysisResults";
 import type { AuditResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const SEVERITY_LABELS: Record<string, string> = {
-  high: "Өндөр",
-  medium: "Дунд",
-  low: "Бага",
-  info: "Мэдээлэл",
-};
 
 type UploadState = "idle" | "uploading" | "auditing" | "success" | "error";
 
@@ -71,22 +64,13 @@ function phaseLabel(state: UploadState): string {
   }
 }
 
-function ComplianceScoreBadge({
-  score,
-  visible,
-}: {
-  score: number;
-  visible: boolean;
-}) {
-  const display = useCountUp(score, 600, visible);
-  return (
-    <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-sm font-bold tabular-nums text-success">
-      {display}/100
-    </span>
-  );
+interface ContractUploadProps {
+  onAnalysisComplete?: () => void;
 }
 
-export default function ContractUpload() {
+export default function ContractUpload({
+  onAnalysisComplete,
+}: ContractUploadProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const hapticFiredRef = useRef(false);
@@ -95,6 +79,7 @@ export default function ContractUpload() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AuditResult | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [alertsExpanded, setAlertsExpanded] = useState(false);
   const [shake, setShake] = useState(false);
   const [consentAccepted, setConsentAccepted] = useState(false);
 
@@ -110,11 +95,12 @@ export default function ContractUpload() {
       triggerHaptic("success");
       const timer = setTimeout(() => {
         setShowResults(true);
+        onAnalysisComplete?.();
         router.refresh();
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [ringComplete, router]);
+  }, [ringComplete, router, onAnalysisComplete]);
 
   const requireConsent = useCallback(() => {
     if (consentAccepted) return true;
@@ -150,6 +136,7 @@ export default function ContractUpload() {
       setError(null);
       setResult(null);
       setShowResults(false);
+      setAlertsExpanded(false);
       hapticFiredRef.current = false;
       triggerHaptic("light");
 
@@ -332,52 +319,11 @@ export default function ContractUpload() {
       )}
 
       {result?.contract && showResults && (
-        <SettleIn className="mt-4 space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="truncate text-sm font-semibold">
-              {result.contract.file_name}
-            </p>
-            {result.contract.compliance_score != null && (
-              <ComplianceScoreBadge
-                score={result.contract.compliance_score}
-                visible={showResults}
-              />
-            )}
-          </div>
-          {result.contract.audit_summary?.summary && (
-            <SettleIn delay={0.08}>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {result.contract.audit_summary.summary}
-              </p>
-            </SettleIn>
-          )}
-          {result.contract.audit_summary?.alerts &&
-            result.contract.audit_summary.alerts.length > 0 && (
-              <StaggerList className="space-y-2">
-                {result.contract.audit_summary.alerts.map((alert) => (
-                  <StaggerItem
-                    key={alert.title}
-                    className="rounded-md border border-border bg-white px-3 py-2 text-xs"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">{alert.title}</p>
-                      <span className="shrink-0 text-[10px] text-muted-foreground">
-                        {SEVERITY_LABELS[alert.severity] ?? alert.severity}
-                      </span>
-                    </div>
-                    {alert.lawName && alert.articleReference && (
-                      <p className="mt-0.5 text-[10px] font-medium text-navy">
-                        {alert.lawName} — {alert.articleReference}
-                      </p>
-                    )}
-                    <p className="mt-0.5 text-muted-foreground">
-                      {alert.description}
-                    </p>
-                  </StaggerItem>
-                ))}
-              </StaggerList>
-            )}
-        </SettleIn>
+        <AnalysisResults
+          contract={result.contract}
+          expanded={alertsExpanded}
+          onToggleExpanded={() => setAlertsExpanded((open) => !open)}
+        />
       )}
     </section>
   );
