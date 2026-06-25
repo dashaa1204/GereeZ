@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { AlertTriangle, CheckCircle2, Clock, FileText } from "lucide-react";
+import { CheckCircle2, FileText } from "lucide-react";
 import type { DashboardMetrics } from "@/lib/contracts";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { triggerHaptic } from "@/lib/hooks/useHaptic";
@@ -49,24 +49,6 @@ export function MetricCards({ metrics }: MetricCardsProps) {
       subtextClass: metrics.activeCount > 0 ? "text-success" : "text-muted-foreground",
       icon: FileText,
       iconClass: "text-navy",
-    },
-    {
-      label: "Хүлээгдэж буй",
-      value: metrics.pendingAudits,
-      suffix: "",
-      subtext: metrics.pendingAudits > 0 ? "Шинжилгээ хийгдэж байна" : "Бүгд дууссан",
-      subtextClass: metrics.pendingAudits > 0 ? "text-warning" : "text-muted-foreground",
-      icon: Clock,
-      iconClass: metrics.pendingAudits > 0 ? "text-warning" : "text-muted-foreground",
-    },
-    {
-      label: "Алдаатай",
-      value: metrics.failedCount,
-      suffix: "",
-      subtext: metrics.failedCount > 0 ? "Дахин оролдоно уу" : "Алдаагүй",
-      subtextClass: metrics.failedCount > 0 ? "text-destructive" : "text-success",
-      icon: AlertTriangle,
-      iconClass: metrics.failedCount > 0 ? "text-destructive" : "text-success",
     },
     {
       label: "Нийцлийн түвшин",
