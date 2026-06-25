@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "./supabase-server";
+import { getDemoContract, isDemoUiEnabled } from "./demo-ui";
 import type { AuditAlert, Contract } from "./types/contract";
 
 export interface DashboardMetrics {
@@ -33,6 +34,26 @@ export async function fetchContracts(): Promise<Contract[]> {
   }
 
   return (data ?? []) as Contract[];
+}
+
+export async function fetchCompletedContracts(): Promise<Contract[]> {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("contracts")
+    .select("*")
+    .eq("status", "completed")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Гэрээ татахад алдаа: ${error.message}`);
+  }
+
+  return (data ?? []) as Contract[];
+}
+
+export async function fetchContractsForPage(): Promise<Contract[]> {
+  if (isDemoUiEnabled()) return [getDemoContract()];
+  return fetchCompletedContracts();
 }
 
 export function buildDashboardData(contracts: Contract[]): DashboardData {
@@ -90,6 +111,9 @@ export function buildDashboardData(contracts: Contract[]): DashboardData {
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
+  if (isDemoUiEnabled()) {
+    return buildDashboardData([getDemoContract()]);
+  }
   const contracts = await fetchContracts();
   return buildDashboardData(contracts);
 }
