@@ -105,3 +105,43 @@ as $$
   order by ld.embedding <=> query_embedding
   limit match_count;
 $$;
+
+-- ---------- 004: Site content (disclaimer, privacy, terms) ----------
+
+create table if not exists public.site_content (
+  slug text primary key
+    check (slug in ('disclaimer', 'privacy_policy', 'terms_of_service')),
+  title text not null,
+  content text not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.site_content enable row level security;
+
+create policy "Allow public read on site content"
+  on public.site_content for select
+  using (true);
+
+insert into public.site_content (slug, title, content) values
+(
+  'disclaimer',
+  'Анхааруулга',
+  'GereeZ платформ нь AI технологид суурилсан гэрээний туслах хэрэгсэл бөгөөд хууль зүйн зөвлөгөө өгөх эрх бүхий байгууллага биш.
+
+• GereeZ-ийн шинжилгээ, оноо, анхааруулга нь зөвхөн мэдээллийн зорилготой.
+• AI систем алдаа гаргах, бүрэн бус мэдээлэл өгөх боломжтой.
+• Мэргэжлийн хууль зүйн зөвлөхөд хандахыг зөвлөж байна.
+
+Энэ анхааруулгыг уншиж, ойлгосны дараа үйлчилгээг ашиглана уу.'
+),
+(
+  'privacy_policy',
+  'Нууцлалын бодлого',
+  'GereeZ таны нууцлалыг хүндэтгэн хамгаална. Оруулсан PDF, шинжилгээний үр дүн зөвхөн үйлчилгээний зорилгоор ашиглагдана.'
+),
+(
+  'terms_of_service',
+  'Үйлчилгээний нөхцөл',
+  'GereeZ платформыг ашигласнаар та үйлчилгээний нөхцөлийг хүлээн зөвшөөрсөнд тооцогдоно. Шинжилгээний үр дүнг мэргэжлийн зөвлөгөөний оронд ашиглахгүй байна.'
+)
+on conflict (slug) do nothing;

@@ -4,7 +4,9 @@ import { LegalScore } from "@/components/dashboard/LegalScore";
 import { ComplianceAlerts } from "@/components/dashboard/ComplianceAlerts";
 import { ActiveContracts } from "@/components/dashboard/ActiveContracts";
 import { BottomNav } from "@/components/dashboard/BottomNav";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 import ContractUpload from "@/components/contracts/ContractUpload";
+import { UploadDisclaimer } from "@/components/legal/UploadDisclaimer";
 import { getDashboardData } from "@/lib/contracts";
 
 export default async function Home() {
@@ -22,10 +24,14 @@ export default async function Home() {
         </section>
 
         <MetricCards metrics={metrics} />
-        <ContractUpload />
+        <div>
+          <ContractUpload />
+          <UploadDisclaimer />
+        </div>
         <LegalScore score={averageScore} />
         <ComplianceAlerts alerts={alerts} highRiskCount={metrics.highRiskCount} />
         <ActiveContracts contracts={contracts} />
+        <LegalFooter />
       </main>
       <BottomNav />
     </div>
