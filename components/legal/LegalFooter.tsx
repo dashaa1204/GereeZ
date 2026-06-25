@@ -9,7 +9,7 @@ const LEGAL_LINKS: { slug: SiteContentSlug; label: string }[] = [
 
 export function LegalFooter() {
   return (
-    <footer className="border-t border-border bg-white px-4 py-6">
+    <footer className="mt-auto shrink-0 border-t border-border px-4 py-4">
       <div className="mx-auto max-w-md space-y-3">
         <p className="text-center text-[10px] text-muted-foreground">
           GereeZ нь мэргэжлийн хууль зүйн зөвлөгөө биш. Шинжилгээний үр дүнг

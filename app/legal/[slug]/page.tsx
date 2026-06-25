@@ -44,7 +44,7 @@ export default async function LegalPage({ params }: PageProps) {
   const updatedAt = new Date(content.updated_at);
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-8">
+    <div className="flex min-h-dvh flex-col bg-zinc-50">
       <header className="sticky top-0 z-10 border-b border-border bg-white px-4 py-3">
         <div className="mx-auto flex max-w-md items-center gap-3">
           <Link
@@ -58,7 +58,7 @@ export default async function LegalPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-4 py-6">
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-6">
         <LegalContentBody content={content.content} />
         {updatedAt.getTime() > 0 && (
           <p className="mt-8 text-[11px] text-muted-foreground">

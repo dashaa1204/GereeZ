@@ -29,7 +29,10 @@ const severityStyles = {
   },
 };
 
-export function ComplianceAlerts({ alerts, highRiskCount }: ComplianceAlertsProps) {
+export function ComplianceAlerts({
+  alerts = [],
+  highRiskCount,
+}: ComplianceAlertsProps) {
   const visibleAlerts = alerts.slice(0, 5);
 
   return (
