@@ -11,7 +11,7 @@ type Mode = "signin" | "signup";
 export function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/";
+  const redirectTo = safeRedirect(searchParams.get("redirect"));
 
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -162,6 +162,19 @@ export function AuthForm() {
       </p>
     </div>
   );
+}
+
+/**
+ * Only allow same-origin relative redirects. Reject absolute URLs and
+ * protocol-relative `//host` values so a crafted `?redirect=` can't bounce
+ * the user to an external phishing site after login.
+ */
+function safeRedirect(value: string | null): string {
+  if (!value) return "/";
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+    return "/";
+  }
+  return value;
 }
 
 function translateAuthError(message: string): string {

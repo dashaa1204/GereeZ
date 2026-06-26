@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { secureCompare } from "@/lib/admin-auth";
 import { extractPdfText } from "@/lib/pdf";
 import { ingestLegalText } from "@/lib/vector-store";
 
@@ -8,11 +9,11 @@ export const maxDuration = 300;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 function isAuthorized(request: Request): boolean {
-  const secret = process.env.LEGAL_INGEST_SECRET;
+  const secret = process.env.LEGAL_INGEST_SECRET?.trim();
   if (!secret) return process.env.NODE_ENV === "development";
 
   const header = request.headers.get("x-ingest-secret");
-  return header === secret;
+  return secureCompare(header, secret);
 }
 
 async function extractTextFromFile(file: File): Promise<string> {

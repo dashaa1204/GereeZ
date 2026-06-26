@@ -17,6 +17,7 @@ export const maxDuration = 120;
 
 export async function POST(request: Request) {
   let contractId: string | undefined;
+  let ownershipVerified = false;
 
   try {
     const user = await getAuthenticatedUser();
@@ -57,6 +58,8 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     }
+
+    ownershipVerified = true;
 
     await supabase
       .from("contracts")
@@ -154,7 +157,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ contract: updatedContract });
   } catch (error) {
-    if (contractId) {
+    // Only touch the row once we've confirmed it belongs to this user, so an
+    // early failure on an attacker-supplied contractId can't flip its status.
+    if (contractId && ownershipVerified) {
       try {
         const supabase = createAdminClient();
         await supabase
