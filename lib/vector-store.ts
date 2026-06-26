@@ -169,7 +169,7 @@ export async function retrieveLegalContext(
   for (const query of queries) {
     const results = await searchLegalDocuments(query, {
       matchCount: 8,
-      matchThreshold: 0.3,
+      matchThreshold: 0.4,
       lawName,
     });
 
@@ -191,7 +191,7 @@ export async function retrieveLegalContext(
   };
 }
 
-function buildContractSearchQueries(contractText: string): string[] {
+export function buildContractSearchQueries(contractText: string): string[] {
   const excerpt = contractText.slice(0, 8_000);
   const keywords = extractTenancyKeywords(contractText);
 
@@ -202,25 +202,35 @@ function buildContractSearchQueries(contractText: string): string[] {
   ];
 }
 
-function extractTenancyKeywords(text: string): string {
-  const keywords = [
-    "түрээс",
-    "түрээслүүлэгч",
-    "түрээслэгч",
-    "байр",
-    "орон сууц",
-    "барьцаа",
-    "deposit",
-    "rent",
-    "lease",
-    "termination",
-    "eviction",
-    "хугацаа",
-    "төлбөр",
-  ];
+// Ordered by discriminating value for legal retrieval: specific dispute terms
+// first, generic topic words (which appear in nearly every rental contract) last.
+const TENANCY_KEYWORDS = [
+  "барьцаа",
+  "deposit",
+  "цуцлах",
+  "termination",
+  "eviction",
+  "төлбөр",
+  "rent",
+  "хугацаа",
+  "түрээслэгч",
+  "түрээслүүлэгч",
+  "lease",
+  "орон сууц",
+  "байр",
+  "түрээс",
+];
 
+const MAX_QUERY_KEYWORDS = 4;
+
+export function extractTenancyKeywords(text: string): string {
   const lower = text.toLowerCase();
-  const found = keywords.filter((keyword) => lower.includes(keyword));
+  // Keep only the few most important matches so the search query stays focused
+  // on one semantic direction rather than being diluted by every term found.
+  const found = TENANCY_KEYWORDS.filter((keyword) => lower.includes(keyword)).slice(
+    0,
+    MAX_QUERY_KEYWORDS,
+  );
   return found.length > 0 ? found.join(", ") : "түрээс, барьцаа, төлбөр, цуцлах";
 }
 

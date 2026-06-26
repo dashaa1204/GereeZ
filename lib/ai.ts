@@ -3,6 +3,7 @@ import { google } from "@ai-sdk/google";
 import {
   getAnthropicApiKey,
   getGoogleApiKey,
+  normalizeAnthropicBaseUrl,
   normalizeAnthropicModel,
   readEnv,
 } from "@/lib/env";
@@ -41,7 +42,10 @@ export function getAuditModel() {
         "ANTHROPIC_API_KEY олдсонгүй. .env.local файлд ANTHROPIC_API_KEY=sk-ant-... гэж нэмнэ үү.",
       );
     }
-    if (!apiKey.startsWith("sk-ant-")) {
+    const baseURL = normalizeAnthropicBaseUrl();
+    // A custom base URL means a proxy/gateway, whose tokens need not look like
+    // Anthropic keys — only enforce the `sk-ant-` shape on the official API.
+    if (!baseURL && !apiKey.startsWith("sk-ant-")) {
       throw new Error(
         "ANTHROPIC_API_KEY буруу форматтай. console.anthropic.com/settings/keys-аас шинэ key хуулна уу.",
       );
@@ -50,7 +54,7 @@ export function getAuditModel() {
     const modelId = normalizeAnthropicModel(
       readEnv("ANTHROPIC_MODEL", "Anthropic_Model"),
     );
-    const anthropic = createAnthropic({ apiKey });
+    const anthropic = createAnthropic(baseURL ? { apiKey, baseURL } : { apiKey });
     return anthropic(modelId);
   }
 
