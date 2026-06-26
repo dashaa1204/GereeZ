@@ -1,13 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, FileText, Loader2, RefreshCw } from "lucide-react";
-import { AuditAlertList } from "@/components/contracts/AuditAlertList";
+import { AnimatePresence, motion } from "motion/react";
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  FileText,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
+import { ExpandableAuditList } from "@/components/contracts/ExpandableAuditList";
+import { SettleIn } from "@/components/ui/SettleIn";
 import { auditContract } from "@/lib/services/contracts.client";
 import { DEMO_CONTRACT_ID } from "@/lib/demo-ui";
-import type { Contract } from "@/lib/types/contract";
+import type { AlertSeverity, Contract } from "@/lib/types/contract";
 import { cn } from "@/lib/utils";
+
+const MAX_VISIBLE_ALERTS = 3;
+const MAX_VISIBLE_STRENGTHS = 2;
+
+const SEVERITY_ORDER: Record<AlertSeverity, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+  info: 3,
+};
 
 interface ActiveContractsProps {
   contracts: Contract[];
@@ -29,6 +48,24 @@ function scoreBadgeClass(score: number): string {
   if (score >= 80) return "bg-success/10 text-success";
   if (score >= 60) return "bg-warning/10 text-warning";
   return "bg-destructive/10 text-destructive";
+}
+
+function scoreTextClass(score: number): string {
+  if (score >= 80) return "text-success";
+  if (score >= 60) return "text-warning";
+  return "text-destructive";
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 80) return "Сайн байдал";
+  if (score >= 60) return "Дунд түвшин";
+  return "Анхаарах шаардлагатай";
+}
+
+function sortAlertsBySeverity<T extends { severity: AlertSeverity }>(alerts: T[]): T[] {
+  return [...alerts].sort(
+    (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+  );
 }
 
 function statusPill(
@@ -69,10 +106,31 @@ function ContractRow({
   retrying: boolean;
   retryError: string | null;
 }) {
-  const alerts = contract.audit_summary?.alerts ?? [];
+  const alerts = sortAlertsBySeverity(contract.audit_summary?.alerts ?? []);
+  const strengths = contract.audit_summary?.strengths ?? [];
   const alertCount = alerts.length;
+  const highRiskCount = alerts.filter((a) => a.severity === "high").length;
   const pill = statusPill(contract);
   const retryable = isRetryable(contract);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [alertsExpanded, setAlertsExpanded] = useState(false);
+  const [strengthsExpanded, setStrengthsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) {
+      setSummaryExpanded(false);
+      setAlertsExpanded(false);
+      setStrengthsExpanded(false);
+    }
+  }, [expanded]);
+
+  const visibleStrengths = strengthsExpanded
+    ? strengths
+    : strengths.slice(0, MAX_VISIBLE_STRENGTHS);
+  const hasMoreStrengths = strengths.length > MAX_VISIBLE_STRENGTHS;
+
+  const summary = contract.audit_summary?.summary;
+  const summaryLong = summary != null && summary.length > 180;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-white">
@@ -96,10 +154,11 @@ function ContractRow({
           <p className="mt-0.5 text-xs text-muted-foreground">
             {formatDate(contract.created_at)}
             {alertCount > 0 && ` · ${alertCount} анхааруулга`}
+            {highRiskCount > 0 && ` · ${highRiskCount} өндөр`}
           </p>
         </div>
 
-        {contract.compliance_score != null ? (
+        {contract.compliance_score != null && !expanded ? (
           <span
             className={cn(
               "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums",
@@ -108,45 +167,169 @@ function ContractRow({
           >
             {contract.compliance_score}
           </span>
-        ) : (
+        ) : contract.compliance_score == null ? (
           pill && (
             <span
               className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
                 pill.className,
               )}
             >
+              {(contract.status === "processing" || contract.status === "pending") && (
+                <Loader2 className="size-3 animate-spin" />
+              )}
               {pill.label}
             </span>
           )
-        )}
+        ) : null}
 
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+            "size-4 shrink-0 text-muted-foreground transition-transform duration-500 ease-out",
             expanded && "rotate-180",
           )}
         />
       </button>
 
-      {expanded && (
-        <div className="space-y-3 border-t border-border bg-muted/20 px-3 py-3">
-          {contract.audit_summary?.summary && (
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {contract.audit_summary.summary}
-            </p>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="contract-details"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{
+              height: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+              opacity: { duration: 0.3, ease: "easeOut" },
+            }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 border-t border-border px-3 py-3">
+          {contract.compliance_score != null && (
+            <SettleIn delay={0.04}>
+            <div className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2.5">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Хуулийн оноо
+                </p>
+                <p className={cn("text-sm font-semibold", scoreTextClass(contract.compliance_score))}>
+                  {scoreLabel(contract.compliance_score)}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  "text-2xl font-bold tabular-nums",
+                  scoreTextClass(contract.compliance_score),
+                )}
+              >
+                {contract.compliance_score}
+              </span>
+            </div>
+            </SettleIn>
           )}
-          {alerts.length > 0 && <AuditAlertList alerts={alerts} />}
+
+          {summary && (
+            <SettleIn delay={0.08}>
+            <div className="rounded-lg border border-border bg-white px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Ерөнхий дүгнэлт
+              </p>
+              <p
+                className={cn(
+                  "mt-1.5 text-sm leading-relaxed text-muted-foreground",
+                  !summaryExpanded && summaryLong && "line-clamp-3",
+                )}
+              >
+                {summary}
+              </p>
+              {summaryLong && (
+                <button
+                  type="button"
+                  onClick={() => setSummaryExpanded((current) => !current)}
+                  className="mt-1.5 text-xs font-medium text-navy hover:underline"
+                >
+                  {summaryExpanded ? "Хураах" : "Дэлгэрэнгүй"}
+                </button>
+              )}
+            </div>
+            </SettleIn>
+          )}
+
+          {alerts.length > 0 && (
+            <SettleIn delay={0.12}>
+            <div className="overflow-hidden rounded-lg border border-border bg-white">
+              <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="size-3.5 text-muted-foreground" />
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Анхааруулга
+                  </p>
+                </div>
+                {highRiskCount > 0 && (
+                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                    {highRiskCount} өндөр эрсдэл
+                  </span>
+                )}
+              </div>
+              <ExpandableAuditList
+                alerts={alerts}
+                expanded={alertsExpanded}
+                onToggleExpanded={() => setAlertsExpanded((current) => !current)}
+                maxVisible={MAX_VISIBLE_ALERTS}
+                className="-mx-0"
+              />
+            </div>
+            </SettleIn>
+          )}
+
+          {strengths.length > 0 && (
+            <SettleIn delay={0.16}>
+            <div className="rounded-lg border border-border bg-white px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Сайн талууд
+              </p>
+              <ul className="mt-1.5 space-y-1.5">
+                {visibleStrengths.map((item) => (
+                  <li key={item} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
+                    <Check className="mt-0.5 size-3.5 shrink-0 text-success" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              {hasMoreStrengths && (
+                <button
+                  type="button"
+                  onClick={() => setStrengthsExpanded((current) => !current)}
+                  className="mt-1.5 text-xs font-medium text-navy hover:underline"
+                >
+                  {strengthsExpanded
+                    ? "Хураах"
+                    : `+${strengths.length - MAX_VISIBLE_STRENGTHS} илүү`}
+                </button>
+              )}
+            </div>
+            </SettleIn>
+          )}
 
           {contract.status !== "completed" && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                {contract.status === "failed"
-                  ? "Шинжилгээ амжилтгүй болсон."
-                  : contract.status === "processing"
-                    ? "Шинжилгээ хийгдэж байна."
-                    : "Шинжилгээ хараахан хийгдээгүй байна."}
-              </p>
+            <SettleIn delay={0.2}>
+            <div className="space-y-2 rounded-lg border border-border bg-white px-3 py-2.5">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {(contract.status === "processing" ||
+                  contract.status === "pending" ||
+                  retrying) && (
+                  <Loader2 className="size-3.5 shrink-0 animate-spin text-navy" />
+                )}
+                <p>
+                  {retrying
+                    ? "Шинжилж байна…"
+                    : contract.status === "failed"
+                      ? "Шинжилгээ амжилтгүй болсон."
+                      : contract.status === "processing"
+                        ? "Шинжилгээ хийгдэж байна."
+                        : "Шинжилгээ хараахан хийгдээгүй байна."}
+                </p>
+              </div>
               {retryable && (
                 <button
                   type="button"
@@ -166,9 +349,12 @@ function ContractRow({
                 <p className="text-xs text-destructive">{retryError}</p>
               )}
             </div>
+            </SettleIn>
           )}
-        </div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

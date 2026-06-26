@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, Loader2, Mail } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Mode = "signin" | "signup";
 
@@ -16,6 +17,7 @@ export function AuthForm() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -109,17 +111,35 @@ export function AuthForm() {
           >
             Нууц үг
           </label>
-          <input
-            id="password"
-            type="password"
-            required
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            className="h-11 w-full rounded-lg border border-border bg-muted/20 px-3 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 disabled:opacity-50"
-            placeholder="••••••••"
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              required
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              className="h-11 w-full rounded-lg border border-border bg-muted/20 py-0 pl-3 pr-10 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 disabled:opacity-50"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              disabled={loading}
+              aria-label={showPassword ? "Нууц үг нуух" : "Нууц үг харах"}
+              className={cn(
+                "absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors",
+                "hover:bg-muted hover:text-foreground disabled:opacity-50",
+              )}
+            >
+              {showPassword ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+            </button>
+          </div>
         </div>
 
         {error && (

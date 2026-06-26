@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Home } from "lucide-react";
 import { AuthForm } from "@/components/auth/AuthForm";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export default function LoginPage() {
   return (
@@ -12,7 +13,13 @@ export default function LoginPage() {
         <span className="text-2xl font-semibold text-navy">GereeZ</span>
       </div>
 
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-10 shadow-sm">
+            <LoadingSpinner label="Ачаалж байна…" />
+          </div>
+        }
+      >
         <AuthForm />
       </Suspense>
     </div>

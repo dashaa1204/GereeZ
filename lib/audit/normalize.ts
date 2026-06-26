@@ -105,6 +105,57 @@ function sanitizeTextField(text: string): string {
     .trim();
 }
 
+const TERMINATION_KEYWORDS = ["цуцла", "мэдэгд", "дөтгнө", "чөлөөл", "дуусгах"];
+
+/** Drop strengths that contradict high/medium alerts on the same topic. */
+function filterStrengthsAgainstAlerts(
+  strengths: string[],
+  alerts: AuditResultSchema["alerts"],
+): string[] {
+  const riskyAlerts = alerts.filter(
+    (alert) => alert.severity === "high" || alert.severity === "medium",
+  );
+  if (riskyAlerts.length === 0) return strengths;
+
+  const alertText = riskyAlerts
+    .map(
+      (alert) =>
+        `${alert.title} ${alert.description} ${alert.contractClause ?? ""}`,
+    )
+    .join(" ")
+    .toLowerCase();
+
+  const alertHasTerminationTopic = TERMINATION_KEYWORDS.some((keyword) =>
+    alertText.includes(keyword),
+  );
+
+  return strengths.filter((strength) => {
+    const normalized = strength.toLowerCase();
+    const strengthHasTerminationTopic = TERMINATION_KEYWORDS.some((keyword) =>
+      normalized.includes(keyword),
+    );
+
+    if (alertHasTerminationTopic && strengthHasTerminationTopic) {
+      const tenantObligation =
+        normalized.includes("түрээслэгч") &&
+        (normalized.includes("үүрэг") ||
+          normalized.includes("хүлээ") ||
+          normalized.includes("мэдэгд"));
+
+      if (tenantObligation) return false;
+    }
+
+    for (const alert of riskyAlerts) {
+      const clause = alert.contractClause?.trim();
+      if (clause && clause.length >= 3 && strength.includes(clause)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 export function normalizeAuditResult(result: AuditResultSchema): AuditResultSchema {
   const rawAlerts = result.alerts.map((alert) => ({
     severity: alert.severity,
@@ -117,13 +168,15 @@ export function normalizeAuditResult(result: AuditResultSchema): AuditResultSche
   }));
 
   const alerts = deduplicateAlerts(rawAlerts.filter((a) => a.title));
+  const strengths = filterStrengthsAgainstAlerts(
+    result.strengths.map(sanitizeTextField).filter(Boolean),
+    alerts,
+  );
 
   return {
     complianceScore: computeComplianceScore(alerts),
     summary: sanitizeTextField(result.summary),
-    strengths: result.strengths
-      .map(sanitizeTextField)
-      .filter(Boolean),
+    strengths,
     alerts,
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
-import { AuditAlertList } from "@/components/contracts/AuditAlertList";
+import { ExpandableAuditList } from "@/components/contracts/ExpandableAuditList";
 import { LegalScore } from "@/components/dashboard/LegalScore";
 import { SettleIn, StaggerItem, StaggerList } from "@/components/ui/SettleIn";
 import type { Contract } from "@/lib/types/contract";
@@ -21,8 +21,6 @@ export function AnalysisResults({
 }: AnalysisResultsProps) {
   const alerts = contract.audit_summary?.alerts ?? [];
   const highRiskCount = alerts.filter((a) => a.severity === "high").length;
-  const visibleAlerts = expanded ? alerts : alerts.slice(0, MAX_VISIBLE_ALERTS);
-  const hasMore = alerts.length > MAX_VISIBLE_ALERTS;
 
   return (
     <SettleIn className="mt-4 overflow-hidden rounded-xl border border-border bg-white">
@@ -53,16 +51,13 @@ export function AnalysisResults({
                 </span>
               )}
             </div>
-            <AuditAlertList alerts={visibleAlerts} variant="list" />
-            {hasMore && (
-              <button
-                type="button"
-                onClick={onToggleExpanded}
-                className="w-full border-t border-border py-3 text-center text-xs font-medium text-navy hover:bg-muted/30 active:bg-muted/50"
-              >
-                {expanded ? "Хураах" : `Нийт ${alerts.length} анхааруулга`}
-              </button>
-            )}
+            <ExpandableAuditList
+              alerts={alerts}
+              expanded={expanded}
+              onToggleExpanded={onToggleExpanded}
+              maxVisible={MAX_VISIBLE_ALERTS}
+              toggleClassName="py-3"
+            />
           </StaggerItem>
         </StaggerList>
       )}

@@ -37,7 +37,9 @@ export const auditResultSchema = z.object({
   ),
   strengths: z
     .array(z.string())
-    .describe("Монгол хуультай нийцсэн зүйлсийн жагсаалт — монгол хэлээр"),
+    .describe(
+      "Түрээслэгчид ашигтай эсвэл хуулийн шаардлагад нийцсэн давуу зүйлс — монгол хэлээр. Түрээслэгчийн үүрэг, хязгаарлалт биш. alerts-д орсон асуудалтай ижил сэдэв, заалтыг давхардуулж бүү бич.",
+    ),
 });
 
 export type AuditResultSchema = z.infer<typeof auditResultSchema>;

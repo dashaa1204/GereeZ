@@ -9,6 +9,7 @@ import {
   BrainCircuit,
   CloudUpload,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/ProgressRing";
@@ -303,7 +304,11 @@ export default function ContractUpload({
         }}
         className="mt-4 h-11 w-full gap-2 rounded-lg bg-navy text-white hover:bg-navy/90 active:scale-[0.98]"
       >
-        <CloudUpload className="size-4" />
+        {isBusy ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <CloudUpload className="size-4" />
+        )}
         {state === "uploading"
           ? "Хадгалж байна…"
           : state === "auditing"

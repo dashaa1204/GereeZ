@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
 export function SignOutButton() {
@@ -25,7 +25,11 @@ export function SignOutButton() {
       aria-label="Гарах"
       className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
     >
-      <LogOut className="size-4" />
+      {loading ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <LogOut className="size-4" />
+      )}
     </button>
   );
 }
