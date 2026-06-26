@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AnimatePresence } from "motion/react";
 import {
   AlertTriangle,
@@ -72,7 +71,6 @@ interface ContractUploadProps {
 export default function ContractUpload({
   onAnalysisComplete,
 }: ContractUploadProps) {
-  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const hapticFiredRef = useRef(false);
   const [state, setState] = useState<UploadState>("idle");
@@ -97,11 +95,10 @@ export default function ContractUpload({
       const timer = setTimeout(() => {
         setShowResults(true);
         onAnalysisComplete?.();
-        router.refresh();
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [ringComplete, router, onAnalysisComplete]);
+  }, [ringComplete, onAnalysisComplete]);
 
   const requireConsent = useCallback(() => {
     if (consentAccepted) return true;
@@ -116,8 +113,10 @@ export default function ContractUpload({
     async (file: File) => {
       if (!requireConsent()) return;
 
-      if (file.type !== "application/pdf") {
-        setError("Зөвхөн PDF файл оруулна уу.");
+      if (
+        !["application/pdf", "image/png", "image/jpeg"].includes(file.type)
+      ) {
+        setError("Зөвхөн PDF эсвэл зураг (PNG, JPG) оруулна уу.");
         setState("error");
         setShake(true);
         triggerHaptic("error");
@@ -125,8 +124,8 @@ export default function ContractUpload({
         return;
       }
 
-      if (file.size > 10 * 1024 * 1024) {
-        setError("Файл 10 MB-аас бага байх ёстой.");
+      if (file.size > 20 * 1024 * 1024) {
+        setError("Файл 20 MB-аас бага байх ёстой.");
         setState("error");
         setShake(true);
         triggerHaptic("error");
@@ -184,7 +183,8 @@ export default function ContractUpload({
         <div className="min-w-0 flex-1">
           <h2 className="font-semibold">Гэрээ оруулах</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            PDF гэрээгээ оруулбал Иргэний хуулийн дагуу AI шинжилгээ хийгдэнэ.
+            PDF эсвэл зураг хэлбэрийн гэрээгээ оруулбал Иргэний хуулийн дагуу AI
+            шинжилгээ хийгдэнэ.
           </p>
         </div>
       </div>
@@ -192,7 +192,7 @@ export default function ContractUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="application/pdf"
+        accept="application/pdf,image/png,image/jpeg"
         className="hidden"
         onChange={handleFileChange}
       />
@@ -280,12 +280,12 @@ export default function ContractUpload({
             <SettleIn key="drop">
               <FileText className="mx-auto size-8 text-muted-foreground" />
               <p className="mt-2 text-sm font-medium">
-                PDF файлаа энд чирж тавина уу
+                PDF эсвэл зургаа энд чирж тавина уу
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {state === "idle" &&
                   (consentAccepted
-                    ? "эсвэл доорх товчоор сонгоно (10 MB хүртэл)"
+                    ? "эсвэл доорх товчоор сонгоно (20 MB хүртэл)"
                     : "Эхлээд дээрх нөхцөлийг зөвшөөрнө үү")}
                 {state === "error" && "Дахин оролдоно уу"}
               </p>

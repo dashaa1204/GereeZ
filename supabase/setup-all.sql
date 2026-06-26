@@ -54,8 +54,8 @@ values (
   'contracts',
   'contracts',
   false,
-  10485760,
-  array['application/pdf']
+  20971520,
+  array['application/pdf', 'image/png', 'image/jpeg']
 )
 on conflict (id) do nothing;
 

@@ -24,6 +24,14 @@ export function hasEmbeddingApiKey(): boolean {
 }
 
 /**
+ * Google Cloud Vision API key — a GCP Console key (NOT a Gemini/AI Studio key),
+ * scoped to the Cloud Vision API. Used to OCR scanned PDFs and image uploads.
+ */
+export function getGoogleVisionApiKey(): string | undefined {
+  return readEnv("GOOGLE_VISION_API_KEY", "GOOGLE_CLOUD_VISION_API_KEY");
+}
+
+/**
  * Resolve the Anthropic base URL, tolerating a bare host set without the `/v1`
  * suffix. The SDK appends `/messages` to whatever baseURL it gets, so a value
  * like `https://api.anthropic.com` yields a 404 — append `/v1` in that case.

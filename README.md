@@ -24,7 +24,7 @@ MVP starts with **rent and civil-law contracts** in Mongolia. The architecture i
 
 ## Features (current)
 
-- PDF contract upload (drag & drop, max 10 MB)
+- PDF or image contract upload (drag & drop, max 20 MB; scanned/image files are read via the vision model)
 - AI legal audit with compliance score (0–100)
 - Severity-based alerts (`high`, `medium`, `low`, `info`) with law references
 - RAG pipeline against **Иргэний хууль** (Civil Code) via Supabase pgvector

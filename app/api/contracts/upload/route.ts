@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { formatUserError } from "@/lib/api-errors";
+import {
+  ACCEPTED_MEDIA_TYPES,
+  detectContractMediaType,
+} from "@/lib/audit";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   CONTRACTS_BUCKET,
@@ -9,7 +13,7 @@ import {
 
 export const runtime = "nodejs";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export async function POST(request: Request) {
   try {
@@ -36,16 +40,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Файл олдсонгүй" }, { status: 400 });
     }
 
-    if (file.type !== "application/pdf") {
+    if (!(ACCEPTED_MEDIA_TYPES as string[]).includes(file.type)) {
       return NextResponse.json(
-        { error: "Зөвхөн PDF файл хүлээн авна" },
+        { error: "Зөвхөн PDF эсвэл зураг (PNG, JPG) хүлээн авна" },
         { status: 400 },
       );
     }
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "Файл 10 MB-аас бага байх ёстой" },
+        { error: "Файл 20 MB-аас бага байх ёстой" },
         { status: 400 },
       );
     }
@@ -53,10 +57,11 @@ export async function POST(request: Request) {
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
     // The `file.type` header is client-controlled and spoofable. Verify the
-    // real content by its magic bytes — every PDF starts with "%PDF-".
-    if (!fileBuffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+    // real content by its magic bytes (PDF / PNG / JPEG).
+    const mediaType = detectContractMediaType(fileBuffer);
+    if (!mediaType) {
       return NextResponse.json(
-        { error: "Файл бодит PDF биш байна" },
+        { error: "Файл бодит PDF эсвэл зураг биш байна" },
         { status: 400 },
       );
     }
@@ -67,7 +72,7 @@ export async function POST(request: Request) {
     const { error: uploadError } = await supabase.storage
       .from(CONTRACTS_BUCKET)
       .upload(storagePath, fileBuffer, {
-        contentType: "application/pdf",
+        contentType: mediaType,
         upsert: false,
       });
 

@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { analyzeContractText, extractPdfText } from "@/lib/audit";
+import {
+  analyzeContractText,
+  detectContractMediaType,
+  extractPdfText,
+  extractTextWithOCR,
+} from "@/lib/audit";
 import { hashContractText } from "@/lib/audit/content-hash";
 import { formatUserError } from "@/lib/api-errors";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -13,7 +18,7 @@ import {
 } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   let contractId: string | undefined;
@@ -82,7 +87,19 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await fileData.arrayBuffer());
-    const contractText = await extractPdfText(buffer);
+
+    // Digital PDFs: extract embedded text (free, exact). Image files and
+    // image-only/scanned PDFs have no extractable text — fall back to the
+    // vision model to read them into text, then run the normal RAG audit.
+    const mediaType = detectContractMediaType(buffer);
+    let contractText = "";
+    if (mediaType === "application/pdf") {
+      contractText = await extractPdfText(buffer);
+    }
+    if (contractText.length < 50 && mediaType && !isDemoMode()) {
+      contractText = await extractTextWithOCR(buffer, mediaType);
+    }
+
     const contentHash = hashContractText(contractText);
 
     let cachedFromPriorAudit = false;
