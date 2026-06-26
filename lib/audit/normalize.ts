@@ -110,6 +110,7 @@ export function normalizeAuditResult(result: AuditResultSchema): AuditResultSche
     severity: alert.severity,
     title: sanitizeTextField(alert.title),
     description: sanitizeTextField(alert.description),
+    contractClause: sanitizeTextField(alert.contractClause ?? ""),
     lawName: alert.lawName?.trim() || "Иргэний хууль",
     articleReference: toMongolianArticleReference(alert.articleReference),
   }));

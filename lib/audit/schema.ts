@@ -15,6 +15,12 @@ export const auditResultSchema = z.object({
       severity: z.enum(["high", "medium", "low", "info"]),
       title: z.string().describe("Анхааруулгын гарчиг — монгол хэлээр"),
       description: z.string().describe("Дэлгэрэнгүй тайлбар — монгол хэлээр"),
+      contractClause: z
+        .string()
+        .optional()
+        .describe(
+          'Гэрээний аль заалт/хэсэгт энэ асуудал байгаа. Гэрээнд дугаар байвал яг бич (жишээ нь "8.13-р заалт"), байхгүй бол холбогдох өгүүлбэрийг богино эш тат. Олдохгүй бол хоосон үлдээ.',
+        ),
       lawName: z
         .string()
         .describe('Иш татсан хуулийн нэр, жишээ нь "Иргэний хууль"'),

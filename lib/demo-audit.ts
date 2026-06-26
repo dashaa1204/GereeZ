@@ -19,6 +19,7 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
       title: "Шудармаг бус цуцлах нөхцөл",
       description:
         "[DEMO] Хугацаанаас өмнө цуцлах торгууль Иргэний хуулийн хамгаалалттай зөрчилдөж болзошгүй. Мэдэгдэл өгөх хугацааг дахин шалгана уу.",
+      contractClause: "8.13-р заалт",
       lawName: "Иргэний хууль",
       articleReference: "295 дүгээр зүйл",
     });
@@ -30,6 +31,7 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
       title: "Барьцааны нөхцөл тодорхой бус",
       description:
         "[DEMO] Барьцаа буцаан олгох хугацаа, нөхцөл тодорхой заагаагүй байна.",
+      contractClause: "Барьцааны тухай заалт байхгүй",
       lawName: "Иргэний хууль",
       articleReference: "296 дүгээр зүйл",
     });

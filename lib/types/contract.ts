@@ -6,6 +6,7 @@ export interface AuditAlert {
   severity: AlertSeverity;
   title: string;
   description: string;
+  contractClause?: string;
   lawName: string;
   articleReference: string;
 }

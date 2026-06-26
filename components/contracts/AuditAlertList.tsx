@@ -68,6 +68,11 @@ export function AuditAlertList({
                 {alert.lawName} — {alert.articleReference}
               </p>
             )}
+            {alert.contractClause && (
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                Гэрээний заалт: {alert.contractClause}
+              </p>
+            )}
             <p className="mt-0.5 text-muted-foreground">{alert.description}</p>
           </div>
         ))}
@@ -102,6 +107,11 @@ export function AuditAlertList({
                 {alert.lawName && alert.articleReference && (
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
                     {alert.lawName} — {alert.articleReference}
+                  </p>
+                )}
+                {alert.contractClause && (
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    Гэрээний заалт: {alert.contractClause}
                   </p>
                 )}
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
