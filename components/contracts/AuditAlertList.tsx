@@ -9,6 +9,19 @@ const SEVERITY_LABELS: Record<AuditAlert["severity"], string> = {
   info: "Мэдээлэл",
 };
 
+const CONFIDENCE_LABELS: Record<NonNullable<AuditAlert["confidence"]>, string> = {
+  high: "Өндөр",
+  medium: "Дунд",
+  low: "Бага",
+};
+
+// Low confidence = AI is unsure the issue is real; flag it so users double-check.
+const confidenceClass: Record<NonNullable<AuditAlert["confidence"]>, string> = {
+  high: "text-muted-foreground",
+  medium: "text-muted-foreground",
+  low: "text-warning",
+};
+
 const severityStyles = {
   high: {
     border: "border-l-destructive",
@@ -61,6 +74,11 @@ export function AuditAlertList({
               <p className="font-medium">{alert.title}</p>
               <span className="shrink-0 text-[10px] text-muted-foreground">
                 {SEVERITY_LABELS[alert.severity]}
+                {alert.confidence && (
+                  <span className={cn("ml-1", confidenceClass[alert.confidence])}>
+                    · Итгэл: {CONFIDENCE_LABELS[alert.confidence]}
+                  </span>
+                )}
               </span>
             </div>
             {alert.lawName && alert.articleReference && (
@@ -95,14 +113,26 @@ export function AuditAlertList({
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-semibold">{alert.title}</p>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                      style.badge,
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {alert.confidence && (
+                      <span
+                        className={cn(
+                          "text-[10px] font-medium",
+                          confidenceClass[alert.confidence],
+                        )}
+                      >
+                        Итгэл: {CONFIDENCE_LABELS[alert.confidence]}
+                      </span>
                     )}
-                  >
-                    {SEVERITY_LABELS[alert.severity]}
-                  </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                        style.badge,
+                      )}
+                    >
+                      {SEVERITY_LABELS[alert.severity]}
+                    </span>
+                  </div>
                 </div>
                 {alert.lawName && alert.articleReference && (
                   <p className="mt-0.5 text-[10px] text-muted-foreground">

@@ -108,6 +108,7 @@ function sanitizeTextField(text: string): string {
 export function normalizeAuditResult(result: AuditResultSchema): AuditResultSchema {
   const rawAlerts = result.alerts.map((alert) => ({
     severity: alert.severity,
+    confidence: alert.confidence,
     title: sanitizeTextField(alert.title),
     description: sanitizeTextField(alert.description),
     contractClause: sanitizeTextField(alert.contractClause ?? ""),

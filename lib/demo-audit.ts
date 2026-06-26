@@ -16,6 +16,7 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
   if (hasTermination) {
     alerts.push({
       severity: "high",
+      confidence: "high",
       title: "Шудармаг бус цуцлах нөхцөл",
       description:
         "[DEMO] Хугацаанаас өмнө цуцлах торгууль Иргэний хуулийн хамгаалалттай зөрчилдөж болзошгүй. Мэдэгдэл өгөх хугацааг дахин шалгана уу.",
@@ -28,6 +29,7 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
   if (!hasDeposit) {
     alerts.push({
       severity: "medium",
+      confidence: "medium",
       title: "Барьцааны нөхцөл тодорхой бус",
       description:
         "[DEMO] Барьцаа буцаан олгох хугацаа, нөхцөл тодорхой заагаагүй байна.",
@@ -39,6 +41,7 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
 
   alerts.push({
     severity: "info",
+    confidence: "high",
     title: "Демо горим идэвхтэй",
     description:
       "Энэ бол жишээ үр дүн. Жинхэнэ AI шинжилгээний тулд ANTHROPIC_API_KEY тохируулна уу.",

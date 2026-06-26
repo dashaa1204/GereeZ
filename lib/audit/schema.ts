@@ -13,6 +13,12 @@ export const auditResultSchema = z.object({
   alerts: z.array(
     z.object({
       severity: z.enum(["high", "medium", "low", "info"]),
+      confidence: z
+        .enum(["high", "medium", "low"])
+        .optional()
+        .describe(
+          'Энэ анхааруулга бодит зөрчил мөн гэдэгт AI хэр итгэлтэй байгаа. Хуулийн эх сурвалжид тодорхой тулгуурлаж байвал "high", дам/эргэлзээтэй бол "medium", эх сурвалж хүрэлцэхгүй эсвэл таамаг бол "low". Severity (ноцтой байдал)-аас тусдаа: бага итгэлтэй ч ноцтой байж болно. Үнэнчээр үнэл.',
+        ),
       title: z.string().describe("Анхааруулгын гарчиг — монгол хэлээр"),
       description: z.string().describe("Дэлгэрэнгүй тайлбар — монгол хэлээр"),
       contractClause: z

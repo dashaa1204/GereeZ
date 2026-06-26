@@ -2,8 +2,12 @@ export type ContractStatus = "pending" | "processing" | "completed" | "failed";
 
 export type AlertSeverity = "high" | "medium" | "low" | "info";
 
+export type AlertConfidence = "high" | "medium" | "low";
+
 export interface AuditAlert {
   severity: AlertSeverity;
+  /** AI's confidence the issue is real. Optional: audits stored before this field shipped lack it. */
+  confidence?: AlertConfidence;
   title: string;
   description: string;
   contractClause?: string;
