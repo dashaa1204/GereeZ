@@ -5,7 +5,11 @@ import { formatUserError } from "@/lib/api-errors";
 import { generateDemoAudit, isDemoMode } from "@/lib/demo-audit";
 import type { AuditSummary } from "@/lib/types/contract";
 import { formatRetrievedArticlesForStorage } from "@/lib/vector-store";
-import { CONTRACTS_BUCKET, createAdminClient } from "@/lib/supabase-server";
+import {
+  CONTRACTS_BUCKET,
+  createAdminClient,
+  getAuthenticatedUser,
+} from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -14,6 +18,11 @@ export async function POST(request: Request) {
   let contractId: string | undefined;
 
   try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Нэвтэрнэ үү" }, { status: 401 });
+    }
+
     const body = await request.json();
     contractId = body?.contractId as string | undefined;
 
@@ -32,7 +41,8 @@ export async function POST(request: Request) {
       .eq("id", contractId)
       .single();
 
-    if (fetchError || !contract) {
+    // 404 (not 403) when the contract belongs to someone else — don't leak existence.
+    if (fetchError || !contract || contract.user_id !== user.id) {
       return NextResponse.json(
         { error: "Гэрээ олдсонгүй" },
         { status: 404 },
@@ -75,6 +85,7 @@ export async function POST(request: Request) {
         .from("contracts")
         .select("compliance_score, audit_summary")
         .eq("status", "completed")
+        .eq("user_id", user.id)
         .neq("id", contractId)
         .filter("audit_summary->>contentHash", "eq", contentHash)
         .order("created_at", { ascending: false })

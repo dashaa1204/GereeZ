@@ -94,8 +94,18 @@ Run migrations in the Supabase SQL Editor (in order):
 1. `supabase/migrations/001_contracts.sql`
 2. `supabase/migrations/002_legal_documents_pgvector.sql`
 3. `supabase/migrations/003_gemini_embeddings_768.sql`
+4. `supabase/migrations/004_site_content.sql`
+5. `supabase/migrations/005_private_contracts_bucket.sql` — makes the contracts bucket private
+6. `supabase/migrations/006_user_auth.sql` — per-user ownership + Row Level Security
 
-Or run the combined script: `supabase/setup-all.sql`
+Or run the combined script: `supabase/setup-all.sql` (already includes a private bucket and per-user RLS).
+
+### 3a. Enable authentication
+
+GereeZ requires users to sign in — uploads, audits, and the dashboard are all
+gated. In the Supabase dashboard go to **Authentication → Providers → Email** and
+enable **Email + Password**. Email confirmation is optional; if left on, new users
+must confirm their address before signing in.
 
 ### 4. Ingest legal knowledge base
 

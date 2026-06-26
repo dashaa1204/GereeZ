@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { formatUserError } from "@/lib/api-errors";
-import { CONTRACTS_BUCKET, createAdminClient } from "@/lib/supabase-server";
+import {
+  CONTRACTS_BUCKET,
+  createAdminClient,
+  getAuthenticatedUser,
+} from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 
@@ -8,6 +12,14 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Нэвтэрнэ үү" },
+        { status: 401 },
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -47,15 +59,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(CONTRACTS_BUCKET).getPublicUrl(storagePath);
-
+    // Bucket is private — no permanent public URL. `storage_path` is the
+    // canonical reference; signed URLs are minted on demand when needed.
     const { data: contract, error: dbError } = await supabase
       .from("contracts")
       .insert({
+        user_id: user.id,
         file_name: file.name,
-        file_url: publicUrl,
         storage_path: storagePath,
         status: "pending",
       })

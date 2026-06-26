@@ -12,6 +12,7 @@ export function getDemoContract(): Contract {
 
   return {
     id: DEMO_CONTRACT_ID,
+    user_id: null,
     file_name: "Түрээсийн_гэрээ_2024.pdf",
     file_url: "",
     storage_path: "",

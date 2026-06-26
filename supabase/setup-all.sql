@@ -7,8 +7,9 @@
 
 create table if not exists public.contracts (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
   file_name text not null,
-  file_url text not null,
+  file_url text,
   storage_path text not null,
   compliance_score integer check (compliance_score >= 0 and compliance_score <= 100),
   audit_summary jsonb,
@@ -20,26 +21,43 @@ create table if not exists public.contracts (
 
 create index if not exists contracts_status_idx on public.contracts (status);
 create index if not exists contracts_created_at_idx on public.contracts (created_at desc);
+create index if not exists contracts_user_id_idx on public.contracts (user_id);
 
 alter table public.contracts enable row level security;
 
-create policy "Allow public read access on contracts"
+-- Per-user access — only the owner can read/write their contracts.
+create policy "Users read own contracts"
   on public.contracts for select
-  using (true);
+  to authenticated
+  using (auth.uid() = user_id);
 
+create policy "Users insert own contracts"
+  on public.contracts for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+create policy "Users update own contracts"
+  on public.contracts for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users delete own contracts"
+  on public.contracts for delete
+  to authenticated
+  using (auth.uid() = user_id);
+
+-- Private bucket — contract files are reachable only via short-lived signed
+-- URLs minted server-side. No public-read policy on storage.objects.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'contracts',
   'contracts',
-  true,
+  false,
   10485760,
   array['application/pdf']
 )
 on conflict (id) do nothing;
-
-create policy "Allow public read on contract files"
-  on storage.objects for select
-  using (bucket_id = 'contracts');
 
 -- ---------- 002: Legal documents + pgvector ----------
 

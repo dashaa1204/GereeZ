@@ -29,8 +29,9 @@ export interface AuditSummary {
 
 export interface Contract {
   id: string;
+  user_id: string | null;
   file_name: string;
-  file_url: string;
+  file_url: string | null;
   storage_path: string;
   compliance_score: number | null;
   audit_summary: AuditSummary | null;
