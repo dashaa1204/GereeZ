@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { formatUserError } from "@/lib/api-errors";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   CONTRACTS_BUCKET,
   createAdminClient,
@@ -17,6 +18,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Нэвтэрнэ үү" },
         { status: 401 },
+      );
+    }
+
+    const rateLimit = await checkRateLimit("upload", user.id);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Хэт олон хүсэлт. Хэсэг хүлээгээд дахин оролдоно уу." },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
       );
     }
 
@@ -41,9 +50,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    // The `file.type` header is client-controlled and spoofable. Verify the
+    // real content by its magic bytes — every PDF starts with "%PDF-".
+    if (!fileBuffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+      return NextResponse.json(
+        { error: "Файл бодит PDF биш байна" },
+        { status: 400 },
+      );
+    }
+
     const supabase = createAdminClient();
     const storagePath = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
 
     const { error: uploadError } = await supabase.storage
       .from(CONTRACTS_BUCKET)

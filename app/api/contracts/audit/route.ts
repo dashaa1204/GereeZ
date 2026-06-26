@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { analyzeContractText, extractPdfText } from "@/lib/audit";
 import { hashContractText } from "@/lib/audit/content-hash";
 import { formatUserError } from "@/lib/api-errors";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { generateDemoAudit, isDemoMode } from "@/lib/demo-audit";
 import type { AuditSummary } from "@/lib/types/contract";
 import { formatRetrievedArticlesForStorage } from "@/lib/vector-store";
@@ -21,6 +22,14 @@ export async function POST(request: Request) {
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Нэвтэрнэ үү" }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimit("audit", user.id);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Хэт олон шинжилгээ. Хэсэг хүлээгээд дахин оролдоно уу." },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
+      );
     }
 
     const body = await request.json();

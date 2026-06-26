@@ -14,7 +14,7 @@ export default async function ContractsPage() {
         <section>
           <h1 className="text-2xl font-bold text-foreground">Миний гэрээнүүд</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Шалгасан гэрээнүүдийн жагсаалт ({contracts.length})
+            Оруулсан бүх гэрээ ({contracts.length})
           </p>
         </section>
 

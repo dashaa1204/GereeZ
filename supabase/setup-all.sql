@@ -163,3 +163,50 @@ insert into public.site_content (slug, title, content) values
   'GereeZ платформыг ашигласнаар та үйлчилгээний нөхцөлийг хүлээн зөвшөөрсөнд тооцогдоно. Шинжилгээний үр дүнг мэргэжлийн зөвлөгөөний оронд ашиглахгүй байна.'
 )
 on conflict (slug) do nothing;
+
+-- ---------- 007: Rate limiting (per-user, DB-backed) ----------
+
+create table if not exists public.rate_limits (
+  id bigint generated always as identity primary key,
+  bucket text not null,
+  subject text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists rate_limits_lookup_idx
+  on public.rate_limits (bucket, subject, created_at desc);
+
+alter table public.rate_limits enable row level security;
+-- No policies: only the service-role client (API routes) accesses this table.
+
+create or replace function public.check_rate_limit(
+  p_bucket text,
+  p_subject text,
+  p_limit int,
+  p_window_seconds int
+) returns boolean
+language plpgsql
+as $$
+declare
+  v_count int;
+begin
+  delete from public.rate_limits
+    where bucket = p_bucket
+      and subject = p_subject
+      and created_at < now() - make_interval(secs => p_window_seconds);
+
+  select count(*) into v_count
+    from public.rate_limits
+    where bucket = p_bucket
+      and subject = p_subject;
+
+  if v_count >= p_limit then
+    return false;
+  end if;
+
+  insert into public.rate_limits (bucket, subject)
+    values (p_bucket, p_subject);
+
+  return true;
+end;
+$$;

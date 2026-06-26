@@ -36,24 +36,11 @@ export async function fetchContracts(): Promise<Contract[]> {
   return (data ?? []) as Contract[];
 }
 
-export async function fetchCompletedContracts(): Promise<Contract[]> {
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from("contracts")
-    .select("*")
-    .eq("status", "completed")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error(`Гэрээ татахад алдаа: ${error.message}`);
-  }
-
-  return (data ?? []) as Contract[];
-}
-
 export async function fetchContractsForPage(): Promise<Contract[]> {
   if (isDemoUiEnabled()) return [getDemoContract()];
-  return fetchCompletedContracts();
+  // Return all contracts (not just completed) so pending/failed ones are
+  // visible and the user can retry stuck audits.
+  return fetchContracts();
 }
 
 export function buildDashboardData(contracts: Contract[]): DashboardData {
