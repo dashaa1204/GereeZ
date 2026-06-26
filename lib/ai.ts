@@ -1,29 +1,23 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
-import { groq } from "@ai-sdk/groq";
 import {
   getAnthropicApiKey,
   getGoogleApiKey,
-  getGroqApiKey,
   normalizeAnthropicModel,
   readEnv,
 } from "@/lib/env";
 
-export type AuditProvider = "anthropic" | "groq" | "google";
+export type AuditProvider = "anthropic" | "google";
 
-const GROQ_AUDIT_MODEL = "openai/gpt-oss-20b";
 const GEMINI_AUDIT_MODEL = "gemini-2.0-flash-lite";
 const DEFAULT_ANTHROPIC_AUDIT_MODEL = "claude-haiku-4-5";
 
 export function hasAuditApiKey(): boolean {
-  return Boolean(
-    getAnthropicApiKey() || getGroqApiKey() || getGoogleApiKey(),
-  );
+  return Boolean(getAnthropicApiKey() || getGoogleApiKey());
 }
 
 export function getAuditProvider(): AuditProvider {
   if (getAnthropicApiKey()) return "anthropic";
-  if (getGroqApiKey()) return "groq";
   return "google";
 }
 
@@ -34,7 +28,6 @@ export function getAuditModelLabel(): string {
       readEnv("ANTHROPIC_MODEL", "Anthropic_Model"),
     );
   }
-  if (provider === "groq") return GROQ_AUDIT_MODEL;
   return GEMINI_AUDIT_MODEL;
 }
 
@@ -59,10 +52,6 @@ export function getAuditModel() {
     );
     const anthropic = createAnthropic({ apiKey });
     return anthropic(modelId);
-  }
-
-  if (provider === "groq") {
-    return groq(GROQ_AUDIT_MODEL);
   }
 
   return google(GEMINI_AUDIT_MODEL);

@@ -3,7 +3,6 @@ import { getAuditModel, getAuditProvider, hasAuditApiKey } from "@/lib/ai";
 import { hasEmbeddingApiKey } from "@/lib/env";
 import type { RetrievedLegalContext } from "@/lib/vector-store";
 import {
-  formatLegalContext,
   retrieveLegalContext,
   retrieveLegalContextByKeywords,
 } from "@/lib/vector-store";
@@ -14,11 +13,6 @@ import {
   type AnalyzeContractResult,
   type AuditResultSchema,
 } from "./schema";
-
-/** Groq free tier TPM is 8000 — keep total prompt under ~6000 tokens. */
-const GROQ_MAX_CONTRACT_CHARS = 5_000;
-const GROQ_MAX_LEGAL_ARTICLES = 5;
-const GROQ_MAX_CHARS_PER_ARTICLE = 450;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -56,54 +50,17 @@ export async function analyzeContractText(
       : contractText;
 
   const provider = getAuditProvider();
-  const { contractText: promptContract, legalContext } = trimAuditContext(
-    truncated,
-    retrievedContext,
-    provider,
-  );
 
   const object = await generateAuditWithRetry(
-    promptContract,
-    buildRAGSystemPrompt(legalContext.contextText),
+    truncated,
+    buildRAGSystemPrompt(retrievedContext.contextText),
     provider,
   );
 
   return {
     ...normalizeAuditResult(object),
-    retrievedContext: legalContext,
+    retrievedContext,
   };
-}
-
-function trimAuditContext(
-  contractText: string,
-  context: RetrievedLegalContext,
-  provider: ReturnType<typeof getAuditProvider>,
-): { contractText: string; legalContext: RetrievedLegalContext } {
-  if (provider === "anthropic" || provider === "google") {
-    return { contractText, legalContext: context };
-  }
-
-  const trimmedMatches = context.matches
-    .slice(0, GROQ_MAX_LEGAL_ARTICLES)
-    .map((match) => ({
-      ...match,
-      content:
-        match.content.length > GROQ_MAX_CHARS_PER_ARTICLE
-          ? `${match.content.slice(0, GROQ_MAX_CHARS_PER_ARTICLE)}…`
-          : match.content,
-    }));
-
-  const legalContext: RetrievedLegalContext = {
-    matches: trimmedMatches,
-    contextText: formatLegalContext(trimmedMatches),
-  };
-
-  const contractTextTrimmed =
-    contractText.length > GROQ_MAX_CONTRACT_CHARS
-      ? `${contractText.slice(0, GROQ_MAX_CONTRACT_CHARS)}\n\n[API хязгаарын улмаас тасалсан]`
-      : contractText;
-
-  return { contractText: contractTextTrimmed, legalContext };
 }
 
 async function retrieveLegalContextSafe(
@@ -149,13 +106,7 @@ async function generateAuditWithRetry(
                 google: { structuredOutputs: true },
               },
             }
-          : provider === "groq"
-            ? {
-                providerOptions: {
-                  groq: { structuredOutputs: true, strictJsonSchema: false },
-                },
-              }
-            : {}),
+          : {}),
         system,
         prompt: `Доорх Монгол түрээсийн гэрээг системийн зааварт өгсөн ХУУЛИЙН ЭХ СУУРЬ-тай харьцуулан шинжил. Дүгнэлтийг бүхэлд нь монгол хэлээр бич:\n\n${contractText}`,
       });

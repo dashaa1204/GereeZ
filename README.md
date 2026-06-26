@@ -39,7 +39,7 @@ MVP starts with **rent and civil-law contracts** in Mongolia. The architecture i
 |-------|--------|
 | Frontend | Next.js 16, React 19, Tailwind CSS, shadcn/ui |
 | Backend | Next.js API Routes, Supabase (Postgres + Storage) |
-| AI | Vercel AI SDK — Anthropic / Groq / Google |
+| AI | Vercel AI SDK — Anthropic / Google |
 | RAG | Gemini embeddings (768d), pgvector, PDF text extraction |
 | Language | Mongolian UI (global-ready structure planned) |
 
@@ -51,7 +51,7 @@ MVP starts with **rent and civil-law contracts** in Mongolia. The architecture i
 
 - Node.js 20+
 - [Supabase](https://supabase.com) project
-- At least one AI provider key: `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, or `GOOGLE_GENERATIVE_AI_API_KEY`
+- At least one AI provider key: `ANTHROPIC_API_KEY` or `GOOGLE_GENERATIVE_AI_API_KEY`
 - Google API key for embeddings (RAG vector search)
 
 ### 1. Clone and install
@@ -74,7 +74,6 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # AI audit (at least one)
 ANTHROPIC_API_KEY=sk-ant-...
-# GROQ_API_KEY=...
 # GOOGLE_GENERATIVE_AI_API_KEY=...
 
 # Embeddings for RAG

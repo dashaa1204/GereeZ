@@ -20,9 +20,6 @@ export function formatUserError(error: unknown): string {
   }
 
   if (lower.includes("too large") || lower.includes("tokens per minute") || lower.includes("tpm")) {
-    if (getAuditProvider() === "groq") {
-      return "Groq free tier-д хэт том хүсэлт. Богино PDF ашиглах эсвэл 1 минут хүлээгээд дахин оролдоно уу.";
-    }
     return "API-д хэт том хүсэлт илгээгдлээ. Богино PDF ашиглаад дахин оролдоно уу.";
   }
 
@@ -34,9 +31,6 @@ export function formatUserError(error: unknown): string {
     const provider = getAuditProvider();
     if (provider === "anthropic") {
       return "Anthropic API key буруу байна. .env.local дотор ANTHROPIC_API_KEY=sk-ant-... зөв эсэхийг шалгана уу.";
-    }
-    if (provider === "groq") {
-      return "Groq API key буруу байна. .env.local дотор GROQ_API_KEY-г шалгана уу.";
     }
     return "API key буруу байна. .env.local тохиргоогоо шалгана уу.";
   }

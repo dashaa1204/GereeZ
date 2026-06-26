@@ -11,10 +11,6 @@ export function getAnthropicApiKey(): string | undefined {
   return readEnv("ANTHROPIC_API_KEY", "Anthropic_API_KEY");
 }
 
-export function getGroqApiKey(): string | undefined {
-  return readEnv("GROQ_API_KEY");
-}
-
 export function getGoogleApiKey(): string | undefined {
   return readEnv(
     "GOOGLE_GENERATIVE_AI_API_KEY",
