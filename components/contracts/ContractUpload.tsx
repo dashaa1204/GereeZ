@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   BrainCircuit,
   CloudUpload,
-  Coins,
   FileText,
   Loader2,
 } from "lucide-react";
@@ -23,6 +22,7 @@ import {
   type AuditQuote,
 } from "@/lib/services/contracts.client";
 import { rechargeCredits } from "@/lib/services/credits.client";
+import { AuditPaymentGate } from "@/components/contracts/AuditPaymentGate";
 import { AnalysisResults } from "@/components/contracts/AnalysisResults";
 import type { AuditResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -306,64 +306,13 @@ export default function ContractUpload({
       </div>
 
       {showGate ? (
-        <SettleIn className="mt-4 rounded-lg border border-navy/20 bg-navy/5 p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-navy">
-            <Coins className="size-4" />
-            Шинжилгээний төлбөр
-          </div>
-          <dl className="mt-3 space-y-1.5 text-sm">
-            <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Хуудасны тоо</dt>
-              <dd className="font-medium">{quote.pageCount}</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Шинжилгээний үнэ</dt>
-              <dd className="font-medium">{quote.cost} кредит</dd>
-            </div>
-            <div className="flex items-center justify-between border-t border-border pt-1.5">
-              <dt className="text-muted-foreground">Таны баланс</dt>
-              <dd
-                className={cn(
-                  "font-semibold",
-                  quote.sufficient ? "text-foreground" : "text-destructive",
-                )}
-              >
-                {quote.balance} кредит
-              </dd>
-            </div>
-          </dl>
-
-          {quote.sufficient ? (
-            <Button
-              type="button"
-              onClick={confirmAudit}
-              className="mt-4 h-11 w-full gap-2 rounded-lg bg-navy text-white hover:bg-navy/90 active:scale-[0.98]"
-            >
-              <BrainCircuit className="size-4" />
-              Баталгаажуулж, шинжлэх ({quote.cost} кредит)
-            </Button>
-          ) : (
-            <>
-              <p className="mt-3 flex items-start gap-2 text-xs text-destructive">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                Кредит хүрэлцэхгүй байна. Доорх товчоор үнэгүй цэнэглэнэ үү
-                (demo).
-              </p>
-              <Button
-                type="button"
-                onClick={handleRecharge}
-                disabled={recharging}
-                className="mt-3 h-11 w-full gap-2 rounded-lg bg-navy text-white hover:bg-navy/90 active:scale-[0.98]"
-              >
-                {recharging ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Coins className="size-4" />
-                )}
-                Кредит цэнэглэх
-              </Button>
-            </>
-          )}
+        <SettleIn className="mt-4">
+          <AuditPaymentGate
+            quote={quote}
+            onConfirm={confirmAudit}
+            onRecharge={handleRecharge}
+            recharging={recharging}
+          />
         </SettleIn>
       ) : (
         <div

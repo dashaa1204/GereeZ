@@ -12,8 +12,14 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ExpandableAuditList } from "@/components/contracts/ExpandableAuditList";
+import { AuditPaymentGate } from "@/components/contracts/AuditPaymentGate";
 import { SettleIn } from "@/components/ui/SettleIn";
-import { auditContract } from "@/lib/services/contracts.client";
+import {
+  auditContract,
+  quoteContract,
+  type AuditQuote,
+} from "@/lib/services/contracts.client";
+import { rechargeCredits } from "@/lib/services/credits.client";
 import { DEMO_CONTRACT_ID } from "@/lib/demo-ui";
 import type { AlertSeverity, Contract } from "@/lib/types/contract";
 import { cn } from "@/lib/utils";
@@ -116,6 +122,18 @@ function ContractRow({
   const [alertsExpanded, setAlertsExpanded] = useState(false);
   const [strengthsExpanded, setStrengthsExpanded] = useState(false);
 
+  // An unpaid contract (pending, or failed before/at the charge) needs the
+  // payment gate before it can be audited — never a silent charge.
+  // An unpaid contract (pending, or failed before/at the charge) needs the
+  // payment gate before it can be audited — never a silent charge.
+  const needsPayment =
+    contract.status === "pending" || contract.status === "failed";
+  const [quote, setQuote] = useState<AuditQuote | null>(null);
+  const [quoteFailed, setQuoteFailed] = useState(false);
+  const [recharging, setRecharging] = useState(false);
+  // Loading is derived (not state) so the effect only sets state in callbacks.
+  const loadingQuote = needsPayment && expanded && !quote && !quoteFailed;
+
   useEffect(() => {
     if (!expanded) {
       setSummaryExpanded(false);
@@ -123,6 +141,38 @@ function ContractRow({
       setStrengthsExpanded(false);
     }
   }, [expanded]);
+
+  // Fetch the quote (pages / cost / balance) when an unpaid contract is opened,
+  // so the user sees what they're paying before confirming — same gate as the
+  // upload flow. On failure the row falls back to a plain retry button.
+  useEffect(() => {
+    if (!expanded || !needsPayment) return;
+    let cancelled = false;
+    quoteContract(contract.id)
+      .then((result) => {
+        if (!cancelled) setQuote(result);
+      })
+      .catch(() => {
+        if (!cancelled) setQuoteFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded, needsPayment, contract.id]);
+
+  const handleRecharge = async () => {
+    setRecharging(true);
+    try {
+      const balance = await rechargeCredits();
+      setQuote((prev) =>
+        prev ? { ...prev, balance, sufficient: balance >= prev.cost } : prev,
+      );
+    } catch {
+      // Recharge failure is surfaced by the disabled state resetting; ignore.
+    } finally {
+      setRecharging(false);
+    }
+  };
 
   const visibleStrengths = strengthsExpanded
     ? strengths
@@ -313,37 +363,54 @@ function ContractRow({
 
           {contract.status !== "completed" && (
             <SettleIn delay={0.2}>
-            <div className="space-y-2 rounded-lg border border-border bg-white px-3 py-2.5">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {(contract.status === "processing" ||
-                  contract.status === "pending" ||
-                  retrying) && (
-                  <Loader2 className="size-3.5 shrink-0 animate-spin text-navy" />
-                )}
-                <p>
-                  {retrying
-                    ? "Шинжилж байна…"
-                    : contract.status === "failed"
-                      ? "Шинжилгээ амжилтгүй болсон."
-                      : contract.status === "processing"
-                        ? "Шинжилгээ хийгдэж байна."
-                        : "Шинжилгээ хараахан хийгдээгүй байна."}
-                </p>
-              </div>
-              {retryable && (
-                <button
-                  type="button"
-                  onClick={onRetry}
-                  disabled={retrying}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-60"
-                >
-                  {retrying ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="size-3.5" />
+            <div className="space-y-2">
+              {needsPayment && quote ? (
+                // Unpaid contract: confirm cost and pay before auditing.
+                <AuditPaymentGate
+                  quote={quote}
+                  onConfirm={onRetry}
+                  onRecharge={handleRecharge}
+                  recharging={recharging}
+                  confirming={retrying}
+                />
+              ) : (
+                <div className="space-y-2 rounded-lg border border-border bg-white px-3 py-2.5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {(contract.status === "processing" ||
+                      retrying ||
+                      loadingQuote) && (
+                      <Loader2 className="size-3.5 shrink-0 animate-spin text-navy" />
+                    )}
+                    <p>
+                      {retrying
+                        ? "Шинжилж байна…"
+                        : loadingQuote
+                          ? "Төлбөрийн мэдээлэл ачаалж байна…"
+                          : contract.status === "failed"
+                            ? "Шинжилгээ амжилтгүй болсон."
+                            : contract.status === "processing"
+                              ? "Шинжилгээ хийгдэж байна."
+                              : "Шинжилгээ хараахан хийгдээгүй байна."}
+                    </p>
+                  </div>
+                  {/* Plain retry only as a fallback: a stale "processing" row,
+                      or when the quote failed to load. */}
+                  {retryable && !loadingQuote && !quote && (
+                    <button
+                      type="button"
+                      onClick={onRetry}
+                      disabled={retrying}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-60"
+                    >
+                      {retrying ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="size-3.5" />
+                      )}
+                      {retrying ? "Шинжилж байна…" : "Дахин шинжлэх"}
+                    </button>
                   )}
-                  {retrying ? "Шинжилж байна…" : "Дахин шинжлэх"}
-                </button>
+                </div>
               )}
               {retryError && (
                 <p className="text-xs text-destructive">{retryError}</p>
