@@ -1,4 +1,5 @@
-import type { AuditResultSchema } from "./schema";
+import type { ContractMetadata } from "@/lib/types/contract";
+import { emptyContractMetadata, type AuditResultSchema } from "./schema";
 
 const SEVERITY_DEDUCTIONS = {
   high: 10,
@@ -156,6 +157,50 @@ function filterStrengthsAgainstAlerts(
   });
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Keep a YYYY-MM-DD that is also a real calendar date; otherwise null. */
+function normalizeDate(value: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!ISO_DATE.test(trimmed)) return null;
+  const parsed = new Date(`${trimmed}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  // Reject overflow like 2024-02-31 that Date silently rolls forward.
+  return parsed.toISOString().slice(0, 10) === trimmed ? trimmed : null;
+}
+
+/** Clamp a positive amount; drop zero/negative/non-finite to null. */
+function normalizeAmount(value: number | null): number | null {
+  if (value == null || !Number.isFinite(value) || value <= 0) return null;
+  return Math.round(value);
+}
+
+/** Validate AI-extracted facts: real dates, positive amounts, sane payment day. */
+function normalizeMetadata(
+  metadata: AuditResultSchema["metadata"] | undefined,
+): ContractMetadata {
+  if (!metadata) return emptyContractMetadata();
+
+  const paymentDay =
+    metadata.paymentDay != null &&
+    Number.isInteger(metadata.paymentDay) &&
+    metadata.paymentDay >= 1 &&
+    metadata.paymentDay <= 31
+      ? metadata.paymentDay
+      : null;
+
+  return {
+    tenantName: metadata.tenantName?.trim() || null,
+    landlordName: metadata.landlordName?.trim() || null,
+    monthlyRent: normalizeAmount(metadata.monthlyRent),
+    deposit: normalizeAmount(metadata.deposit),
+    startDate: normalizeDate(metadata.startDate),
+    endDate: normalizeDate(metadata.endDate),
+    paymentDay,
+  };
+}
+
 export function normalizeAuditResult(result: AuditResultSchema): AuditResultSchema {
   const rawAlerts = result.alerts.map((alert) => ({
     severity: alert.severity,
@@ -178,5 +223,6 @@ export function normalizeAuditResult(result: AuditResultSchema): AuditResultSche
     summary: sanitizeTextField(result.summary),
     strengths,
     alerts,
+    metadata: normalizeMetadata(result.metadata),
   };
 }

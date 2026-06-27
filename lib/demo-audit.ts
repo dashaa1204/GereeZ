@@ -58,6 +58,15 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
       "Түрээслүүлэгч, түрээслэгчийн талууд тодорхойлогдсон",
       "Сарын түрээсийн дүн заасан",
     ],
+    metadata: {
+      tenantName: "Болд",
+      landlordName: "Дорж",
+      monthlyRent: 1500000,
+      deposit: 3000000,
+      startDate: "2024-09-01",
+      endDate: "2025-09-01",
+      paymentDay: 5,
+    },
     retrievedContext: {
       matches: [
         {

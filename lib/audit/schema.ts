@@ -1,5 +1,56 @@
 import { z } from "zod";
 import type { RetrievedLegalContext } from "@/lib/vector-store";
+import type { ContractMetadata } from "@/lib/types/contract";
+
+/**
+ * Structured facts the audit pulls out of the contract for the tracking view.
+ * Every field is nullable: the model returns null when the contract does not
+ * state it, rather than guessing.
+ */
+export const contractMetadataSchema = z.object({
+  tenantName: z
+    .string()
+    .nullable()
+    .describe("Түрээслэгч (хөлслөгч)-ийн нэр. Гэрээнд байхгүй бол null."),
+  landlordName: z
+    .string()
+    .nullable()
+    .describe("Түрээслүүлэгч (эзэн)-ийн нэр. Гэрээнд байхгүй бол null."),
+  monthlyRent: z
+    .number()
+    .nullable()
+    .describe("Сарын түрээсийн төлбөр төгрөгөөр, зөвхөн тоо. Байхгүй бол null."),
+  deposit: z
+    .number()
+    .nullable()
+    .describe("Барьцаа/батлан даалтын мөнгө төгрөгөөр, зөвхөн тоо. Байхгүй бол null."),
+  startDate: z
+    .string()
+    .nullable()
+    .describe('Гэрээ эхэлсэн огноо "YYYY-MM-DD" хэлбэрээр. Байхгүй бол null.'),
+  endDate: z
+    .string()
+    .nullable()
+    .describe('Гэрээ дуусах огноо "YYYY-MM-DD" хэлбэрээр. Байхгүй бол null.'),
+  paymentDay: z
+    .number()
+    .int()
+    .nullable()
+    .describe("Сар бүр төлбөр төлөх өдөр (1-31). Байхгүй бол null."),
+});
+
+/** All-null metadata for paths that have no extracted facts (demo, cache). */
+export function emptyContractMetadata(): ContractMetadata {
+  return {
+    tenantName: null,
+    landlordName: null,
+    monthlyRent: null,
+    deposit: null,
+    startDate: null,
+    endDate: null,
+    paymentDay: null,
+  };
+}
 
 export const auditResultSchema = z.object({
   complianceScore: z
@@ -40,6 +91,9 @@ export const auditResultSchema = z.object({
     .describe(
       "Түрээслэгчид ашигтай эсвэл хуулийн шаардлагад нийцсэн давуу зүйлс — монгол хэлээр. Түрээслэгчийн үүрэг, хязгаарлалт биш. alerts-д орсон асуудалтай ижил сэдэв, заалтыг давхардуулж бүү бич.",
     ),
+  metadata: contractMetadataSchema.describe(
+    "Гэрээнээс гаргаж авсан үндсэн мэдээлэл (тал, дүн, огноо) — хяналтын самбарт ашиглана.",
+  ),
 });
 
 export type AuditResultSchema = z.infer<typeof auditResultSchema>;

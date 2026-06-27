@@ -7,7 +7,7 @@ import { Bell, FileText, Home, Settings } from "lucide-react";
 const navItems = [
   { label: "Нүүр", icon: Home, href: "/" },
   { label: "Гэрээ", icon: FileText, href: "/contracts" },
-  { label: "Анхааруулга", icon: Bell, href: "/" },
+  { label: "Анхааруулга", icon: Bell, href: "/alerts" },
   { label: "Тохиргоо", icon: Settings, href: "/settings/legal" },
 ];
 

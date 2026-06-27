@@ -18,12 +18,23 @@ export function getDemoContract(): Contract {
     storage_path: "",
     compliance_score: 72,
     status: "completed",
+    start_date: "2024-09-01",
+    end_date: "2025-09-01",
     created_at: now,
     updated_at: now,
     audit_summary: {
       summary:
         "Гэрээг Иргэний хуулийн үндсэн шаардлагатай харьцуулан шинжлэв. Цуцлах нөхцөл болон барьцааны заалтуудад анхаарах шаардлагатай.",
       demoMode: true,
+      metadata: {
+        tenantName: "Болд",
+        landlordName: "Дорж",
+        monthlyRent: 1500000,
+        deposit: 3000000,
+        startDate: "2024-09-01",
+        endDate: "2025-09-01",
+        paymentDay: 5,
+      },
       strengths: [
         "Түрээслүүлэгч, түрээслэгчийн талууд тодорхойлогдсон",
         "Сарын түрээсийн дүн заасан",

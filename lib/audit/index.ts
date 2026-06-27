@@ -2,6 +2,7 @@ export { analyzeContractText } from "./analyze";
 export { buildRAGSystemPrompt } from "./prompt";
 export {
   auditResultSchema,
+  emptyContractMetadata,
   type AnalyzeContractResult,
   type AuditResultSchema,
 } from "./schema";

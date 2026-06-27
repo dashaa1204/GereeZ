@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  AlarmClock,
   AlertTriangle,
+  CalendarDays,
   Check,
   ChevronDown,
+  Coins,
   FileText,
   Loader2,
   RefreshCw,
+  Users,
+  Wallet,
 } from "lucide-react";
 import { ExpandableAuditList } from "@/components/contracts/ExpandableAuditList";
 import { AuditPaymentGate } from "@/components/contracts/AuditPaymentGate";
@@ -22,6 +27,16 @@ import {
 import { rechargeCredits } from "@/lib/services/credits.client";
 import { DEMO_CONTRACT_ID } from "@/lib/demo-ui";
 import type { AlertSeverity, Contract } from "@/lib/types/contract";
+import {
+  expiryLabel,
+  formatDateMn,
+  formatMNT,
+  getEndDate,
+  getMetadata,
+  getStartDate,
+  getTrackStatus,
+  hasTrackingInfo,
+} from "@/lib/tracking";
 import { cn } from "@/lib/utils";
 
 const MAX_VISIBLE_ALERTS = 3;
@@ -97,6 +112,28 @@ function isRetryable(contract: Contract): boolean {
   return false;
 }
 
+function MetaFact({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Coins;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="mt-0.5 size-3.5 shrink-0 text-navy/60" />
+      <div className="min-w-0">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <p className="truncate text-sm font-medium text-foreground">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 function ContractRow({
   contract,
   expanded,
@@ -114,6 +151,25 @@ function ContractRow({
 }) {
   const alerts = sortAlertsBySeverity(contract.audit_summary?.alerts ?? []);
   const strengths = contract.audit_summary?.strengths ?? [];
+
+  const meta = getMetadata(contract);
+  const showMeta = hasTrackingInfo(contract);
+  const expiry = expiryLabel(contract);
+  const trackStatus = getTrackStatus(contract);
+  const flagExpiry =
+    expiry != null &&
+    (trackStatus === "expiring-soon" || trackStatus === "expired");
+  const metaStart = formatDateMn(getStartDate(contract));
+  const metaEnd = formatDateMn(getEndDate(contract));
+  const metaPeriod =
+    metaStart || metaEnd ? `${metaStart ?? "?"} — ${metaEnd ?? "?"}` : null;
+  const metaRent = formatMNT(meta?.monthlyRent ?? null);
+  const metaDeposit = formatMNT(meta?.deposit ?? null);
+  const metaParties =
+    meta?.landlordName || meta?.tenantName
+      ? [meta?.landlordName ?? "—", meta?.tenantName ?? "—"].join(" → ")
+      : null;
+
   const alertCount = alerts.length;
   const highRiskCount = alerts.filter((a) => a.severity === "high").length;
   const pill = statusPill(contract);
@@ -206,6 +262,19 @@ function ContractRow({
             {alertCount > 0 && ` · ${alertCount} анхааруулга`}
             {highRiskCount > 0 && ` · ${highRiskCount} өндөр`}
           </p>
+          {flagExpiry && (
+            <span
+              className={cn(
+                "mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                trackStatus === "expired"
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-warning/10 text-warning",
+              )}
+            >
+              <AlarmClock className="size-2.5" />
+              {expiry}
+            </span>
+          )}
         </div>
 
         {contract.compliance_score != null && !expanded ? (
@@ -274,6 +343,41 @@ function ContractRow({
               >
                 {contract.compliance_score}
               </span>
+            </div>
+            </SettleIn>
+          )}
+
+          {showMeta && (
+            <SettleIn delay={0.06}>
+            <div className="rounded-lg border border-border bg-white px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Гэрээний мэдээлэл
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                {metaParties && (
+                  <MetaFact icon={Users} label="Талууд" value={metaParties} />
+                )}
+                {metaPeriod && (
+                  <MetaFact
+                    icon={CalendarDays}
+                    label="Хүчинтэй хугацаа"
+                    value={metaPeriod}
+                  />
+                )}
+                {metaRent && (
+                  <MetaFact icon={Coins} label="Сарын түрээс" value={metaRent} />
+                )}
+                {metaDeposit && (
+                  <MetaFact icon={Wallet} label="Барьцаа" value={metaDeposit} />
+                )}
+                {meta?.paymentDay != null && (
+                  <MetaFact
+                    icon={AlarmClock}
+                    label="Төлбөрийн өдөр"
+                    value={`Сар бүрийн ${meta.paymentDay}-нд`}
+                  />
+                )}
+              </div>
             </div>
             </SettleIn>
           )}

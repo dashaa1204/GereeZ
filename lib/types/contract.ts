@@ -22,6 +22,28 @@ export interface RetrievedArticle {
   similarity: number;
 }
 
+/**
+ * Structured facts pulled out of the contract during the audit, used by the
+ * tracking view (expiry countdown, rent/deposit display). Every field is
+ * nullable — older contracts and partial documents may not carry all of it.
+ */
+export interface ContractMetadata {
+  /** Tenant (хөлслөгч) name. */
+  tenantName: string | null;
+  /** Landlord (түрээслүүлэгч) name. */
+  landlordName: string | null;
+  /** Monthly rent in MNT. */
+  monthlyRent: number | null;
+  /** Deposit / security amount in MNT. */
+  deposit: number | null;
+  /** Contract start date, ISO `YYYY-MM-DD`. */
+  startDate: string | null;
+  /** Contract end / expiry date, ISO `YYYY-MM-DD`. */
+  endDate: string | null;
+  /** Day of month rent is due (1–31). */
+  paymentDay: number | null;
+}
+
 export interface AuditSummary {
   summary: string;
   alerts: AuditAlert[];
@@ -31,6 +53,8 @@ export interface AuditSummary {
   rawHash?: string;
   cachedFromPriorAudit?: boolean;
   retrievedArticles?: RetrievedArticle[];
+  /** Structured facts for the tracking view. Absent on pre-tracking audits. */
+  metadata?: ContractMetadata;
   demoMode?: boolean;
 }
 
@@ -43,6 +67,10 @@ export interface Contract {
   compliance_score: number | null;
   audit_summary: AuditSummary | null;
   status: ContractStatus;
+  /** Contract start date (ISO date) — mirrors audit_summary.metadata.startDate. */
+  start_date: string | null;
+  /** Contract end date (ISO date) — mirrors audit_summary.metadata.endDate. */
+  end_date: string | null;
   created_at: string;
   updated_at: string;
 }

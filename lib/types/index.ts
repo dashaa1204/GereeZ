@@ -4,6 +4,7 @@ export type {
   AuditResult,
   AuditSummary,
   Contract,
+  ContractMetadata,
   ContractStatus,
   RetrievedArticle,
 } from "./contract";

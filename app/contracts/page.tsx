@@ -1,5 +1,6 @@
 import { Header } from "@/components/dashboard/Header";
 import { ActiveContracts } from "@/components/dashboard/ActiveContracts";
+import { ContractsSummary } from "@/components/dashboard/ContractsSummary";
 import { BottomNav } from "@/components/dashboard/BottomNav";
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { fetchContractsForPage } from "@/lib/contracts";
@@ -14,9 +15,11 @@ export default async function ContractsPage() {
         <section>
           <h1 className="text-2xl font-bold text-foreground">Миний гэрээнүүд</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Оруулсан бүх гэрээ ({contracts.length})
+            Гэрээ, хугацаа, эрсдэлийг нэг дороос
           </p>
         </section>
+
+        {contracts.length > 0 && <ContractsSummary contracts={contracts} />}
 
         <ActiveContracts contracts={contracts} showHeader={false} />
       </main>

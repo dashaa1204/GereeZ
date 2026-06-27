@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   analyzeContractText,
   detectContractMediaType,
+  emptyContractMetadata,
   extractPdfText,
   extractTextWithOCR,
   getPdfPageCount,
@@ -123,12 +124,23 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       const dupSummary = dupContract?.audit_summary as AuditSummary | null;
-      if (dupContract && dupSummary?.alerts) {
+      // Only reuse a *fresh* current-pipeline audit as a cache source: it must
+      // carry `metadata` (pre-tracking audits don't) and must itself be an
+      // original AI run, not a prior cache copy (those may have stamped-empty
+      // metadata). This self-heals older copies instead of propagating blanks.
+      if (
+        dupContract &&
+        dupSummary?.alerts &&
+        dupSummary.metadata &&
+        !dupSummary.cachedFromPriorAudit
+      ) {
         const { data: reused, error: reuseError } = await supabase
           .from("contracts")
           .update({
             compliance_score: dupContract.compliance_score,
             audit_summary: { ...dupSummary, cachedFromPriorAudit: true },
+            start_date: dupSummary.metadata?.startDate ?? null,
+            end_date: dupSummary.metadata?.endDate ?? null,
             status: "completed",
             updated_at: new Date().toISOString(),
           })
@@ -203,7 +215,11 @@ export async function POST(request: Request) {
       if (
         cachedContract &&
         cachedSummary?.alerts &&
-        cachedSummary.contentHash === contentHash
+        cachedSummary.contentHash === contentHash &&
+        // Reuse only a fresh current-pipeline audit (carries metadata, not a
+        // prior cache copy) so pre-tracking and stamped-empty entries re-run.
+        cachedSummary.metadata &&
+        !cachedSummary.cachedFromPriorAudit
       ) {
         cachedFromPriorAudit = true;
         audit = {
@@ -211,6 +227,7 @@ export async function POST(request: Request) {
           summary: cachedSummary.summary,
           alerts: cachedSummary.alerts,
           strengths: cachedSummary.strengths ?? [],
+          metadata: cachedSummary.metadata ?? emptyContractMetadata(),
           retrievedContext: { matches: [], contextText: "" },
         };
       } else {
@@ -234,10 +251,12 @@ export async function POST(request: Request) {
       }
     }
 
+    const metadata = audit.metadata ?? emptyContractMetadata();
     const auditSummary: AuditSummary = {
       summary: audit.summary,
       alerts: audit.alerts,
       strengths: audit.strengths,
+      metadata,
       contentHash,
       rawHash,
       retrievedArticles: cachedFromPriorAudit
@@ -252,6 +271,8 @@ export async function POST(request: Request) {
       .update({
         compliance_score: audit.complianceScore,
         audit_summary: auditSummary,
+        start_date: metadata.startDate,
+        end_date: metadata.endDate,
         page_count: pageCount,
         status: "completed",
         updated_at: new Date().toISOString(),
