@@ -27,6 +27,8 @@ export interface AuditSummary {
   alerts: AuditAlert[];
   strengths: string[];
   contentHash?: string;
+  /** Hash of the raw uploaded bytes — reuses a prior audit on identical re-uploads. */
+  rawHash?: string;
   cachedFromPriorAudit?: boolean;
   retrievedArticles?: RetrievedArticle[];
   demoMode?: boolean;

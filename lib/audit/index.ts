@@ -5,8 +5,8 @@ export {
   type AnalyzeContractResult,
   type AuditResultSchema,
 } from "./schema";
-export { extractPdfText } from "@/lib/pdf";
-export { extractTextWithOCR } from "./ocr";
+export { extractPdfText, getPdfPageCount, MAX_AUDIT_PAGES } from "@/lib/pdf";
+export { extractTextWithOCR, MAX_OCR_PDF_PAGES } from "./ocr";
 export {
   detectContractMediaType,
   ACCEPTED_MEDIA_TYPES,

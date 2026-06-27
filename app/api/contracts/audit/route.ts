@@ -4,10 +4,14 @@ import {
   detectContractMediaType,
   extractPdfText,
   extractTextWithOCR,
+  getPdfPageCount,
+  MAX_AUDIT_PAGES,
+  MAX_OCR_PDF_PAGES,
 } from "@/lib/audit";
-import { hashContractText } from "@/lib/audit/content-hash";
+import { hashContractText, hashRawFile } from "@/lib/audit/content-hash";
 import { formatUserError } from "@/lib/api-errors";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { auditCost, chargeCredits, refundCredits } from "@/lib/credits";
 import { generateDemoAudit, isDemoMode } from "@/lib/demo-audit";
 import type { AuditSummary } from "@/lib/types/contract";
 import { formatRetrievedArticlesForStorage } from "@/lib/vector-store";
@@ -19,6 +23,11 @@ import {
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+// High sanity ceiling on extracted text. Per-page credit charging bounds the
+// real cost; this only refuses a pathologically long file rather than
+// truncating it. Comfortably within Haiku's 200K-token context window.
+const MAX_CONTRACT_CHARS = 400_000;
 
 export async function POST(request: Request) {
   let contractId: string | undefined;
@@ -66,6 +75,15 @@ export async function POST(request: Request) {
 
     ownershipVerified = true;
 
+    // Mark the contract failed and return a user-facing validation error.
+    const failAudit = async (message: string, status = 400) => {
+      await supabase
+        .from("contracts")
+        .update({ status: "failed" })
+        .eq("id", contractId);
+      return NextResponse.json({ error: message }, { status });
+    };
+
     await supabase
       .from("contracts")
       .update({ status: "processing" })
@@ -87,17 +105,76 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await fileData.arrayBuffer());
+    const mediaType = detectContractMediaType(buffer);
+
+    // Cheapest spam gate: a byte-identical re-upload reuses the prior audit
+    // before paying for any OCR or AI. Runs ahead of extraction.
+    const rawHash = hashRawFile(buffer);
+    if (!isDemoMode()) {
+      const { data: dupContract } = await supabase
+        .from("contracts")
+        .select("compliance_score, audit_summary")
+        .eq("status", "completed")
+        .eq("user_id", user.id)
+        .neq("id", contractId)
+        .filter("audit_summary->>rawHash", "eq", rawHash)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const dupSummary = dupContract?.audit_summary as AuditSummary | null;
+      if (dupContract && dupSummary?.alerts) {
+        const { data: reused, error: reuseError } = await supabase
+          .from("contracts")
+          .update({
+            compliance_score: dupContract.compliance_score,
+            audit_summary: { ...dupSummary, cachedFromPriorAudit: true },
+            status: "completed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", contractId)
+          .select()
+          .single();
+        if (reuseError) {
+          return failAudit(`Шинжилгээ хадгалахад алдаа: ${reuseError.message}`, 500);
+        }
+        return NextResponse.json({ contract: reused });
+      }
+    }
 
     // Digital PDFs: extract embedded text (free, exact). Image files and
     // image-only/scanned PDFs have no extractable text — fall back to the
     // vision model to read them into text, then run the normal RAG audit.
-    const mediaType = detectContractMediaType(buffer);
+    // Page counts are capped so a single large file can't run up an unbounded
+    // AI bill; over-limit files are rejected, never silently truncated.
     let contractText = "";
+    let pageCount = 1;
     if (mediaType === "application/pdf") {
+      pageCount = await getPdfPageCount(buffer);
+      if (pageCount > MAX_AUDIT_PAGES) {
+        return failAudit(
+          `Гэрээ хэт олон хуудастай байна (${pageCount}). Одоогоор ${MAX_AUDIT_PAGES} хүртэл хуудас дэмжинэ.`,
+        );
+      }
       contractText = await extractPdfText(buffer);
-    }
-    if (contractText.length < 50 && mediaType && !isDemoMode()) {
+      if (contractText.length < 50 && !isDemoMode()) {
+        // No embedded text → scanned PDF. Vision's sync endpoint reads only the
+        // first few pages, so reject longer ones rather than audit a fragment.
+        if (pageCount > MAX_OCR_PDF_PAGES) {
+          return failAudit(
+            `Скан хийсэн PDF хэт олон хуудастай байна (${pageCount}). Зурган гэрээг ${MAX_OCR_PDF_PAGES} хүртэл хуудсаар оруулна уу.`,
+          );
+        }
+        contractText = await extractTextWithOCR(buffer, mediaType);
+      }
+    } else if (mediaType && !isDemoMode()) {
       contractText = await extractTextWithOCR(buffer, mediaType);
+    }
+
+    if (contractText.length > MAX_CONTRACT_CHARS) {
+      return failAudit(
+        `Гэрээний текст хэт урт байна (${contractText.length.toLocaleString()} тэмдэгт). ${MAX_CONTRACT_CHARS.toLocaleString()} тэмдэгтээс бага байх ёстой.`,
+      );
     }
 
     const contentHash = hashContractText(contractText);
@@ -137,7 +214,23 @@ export async function POST(request: Request) {
           retrievedContext: { matches: [], contextText: "" },
         };
       } else {
-        audit = await analyzeContractText(contractText);
+        // Real AI work ahead — charge credits now (idempotent per contract, so
+        // a retry won't double-bill). Demo and cache-hit paths above are free.
+        const cost = auditCost(pageCount);
+        const charge = await chargeCredits(user.id, contractId, cost);
+        if (!charge.ok) {
+          return failAudit(
+            `Кредит хүрэлцэхгүй байна. Шинжилгээнд ${cost} кредит шаардлагатай, танд ${charge.balance} байна. Дахин цэнэглэнэ үү.`,
+            402,
+          );
+        }
+        try {
+          audit = await analyzeContractText(contractText);
+        } catch (err) {
+          // Refund so a transient AI failure doesn't cost the user credits.
+          await refundCredits(contractId);
+          throw err;
+        }
       }
     }
 
@@ -146,6 +239,7 @@ export async function POST(request: Request) {
       alerts: audit.alerts,
       strengths: audit.strengths,
       contentHash,
+      rawHash,
       retrievedArticles: cachedFromPriorAudit
         ? (cachedSummary?.retrievedArticles ?? [])
         : formatRetrievedArticlesForStorage(audit.retrievedContext.matches),
@@ -158,6 +252,7 @@ export async function POST(request: Request) {
       .update({
         compliance_score: audit.complianceScore,
         audit_summary: auditSummary,
+        page_count: pageCount,
         status: "completed",
         updated_at: new Date().toISOString(),
       })

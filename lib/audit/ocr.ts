@@ -5,6 +5,13 @@ const VISION_ENDPOINT = "https://vision.googleapis.com/v1";
 // Mongolian Cyrillic first; Russian/English help mixed-script contracts.
 const LANGUAGE_HINTS = ["mn", "ru", "en"];
 
+/**
+ * The synchronous Vision PDF endpoint (files:annotate) reads at most the first
+ * 5 pages. Scanned PDFs longer than this would be silently truncated, so the
+ * caller rejects them instead. Lifting this requires the async GCS endpoint.
+ */
+export const MAX_OCR_PDF_PAGES = 5;
+
 interface VisionTextAnnotation {
   fullTextAnnotation?: { text?: string };
 }

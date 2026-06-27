@@ -1,6 +1,14 @@
 const PAGE_BATCH_SIZE = 3;
 
-async function getPageCount(buffer: Buffer): Promise<number> {
+/**
+ * High sanity ceiling on pages sent to the AI audit. Per-page credit charging
+ * (see lib/credits.ts) is what actually bounds cost now — the user pays for what
+ * they audit — so this is only a guard against a pathological file (thousands of
+ * pages). Reject over this, don't truncate.
+ */
+export const MAX_AUDIT_PAGES = 100;
+
+export async function getPdfPageCount(buffer: Buffer): Promise<number> {
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: buffer });
   try {
@@ -27,7 +35,7 @@ async function extractPageBatch(
 
 /** Extract text from a PDF buffer, using a fresh parser per batch to limit memory. */
 export async function extractPdfText(buffer: Buffer): Promise<string> {
-  const totalPages = await getPageCount(buffer);
+  const totalPages = await getPdfPageCount(buffer);
 
   if (!totalPages) {
     return extractPageBatch(buffer, []);
