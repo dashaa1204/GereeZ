@@ -7,8 +7,8 @@ import {
   AlertTriangle,
   BrainCircuit,
   CloudUpload,
-  FileText,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/ProgressRing";
@@ -323,7 +323,7 @@ export default function ContractUpload({
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           className={cn(
-            "mt-4 rounded-lg border-2 p-6 text-center transition-all duration-300",
+            "mt-4 rounded-2xl border-2 p-7 text-center transition-all duration-300",
             showRing ? "border-solid" : "border-dashed",
             state === "success"
               ? "border-success/30 bg-success/5"
@@ -346,9 +346,12 @@ export default function ContractUpload({
               </SettleIn>
             ) : (
               <SettleIn key="drop">
-                <FileText className="mx-auto size-8 text-muted-foreground" />
-                <p className="mt-2 text-sm font-medium">
-                  PDF эсвэл зургаа энд чирж тавина уу
+                <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-navy/10">
+                  <CloudUpload className="size-7 text-navy" />
+                </div>
+                <p className="mt-3 text-sm font-semibold">PDF гэрээ оруулах</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Скан зураг ч мөн боломжтой (OCR)
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {state === "idle" &&
@@ -364,29 +367,36 @@ export default function ContractUpload({
       )}
 
       {!showGate && (
-        <Button
-          type="button"
-          disabled={isBusy || !consentAccepted}
-          onClick={() => {
-            if (!requireConsent()) return;
-            triggerHaptic("light");
-            inputRef.current?.click();
-          }}
-          className="mt-4 h-11 w-full gap-2 rounded-lg bg-navy text-white hover:bg-navy/90 active:scale-[0.98]"
-        >
-          {isBusy ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <CloudUpload className="size-4" />
+        <>
+          <Button
+            type="button"
+            disabled={isBusy || !consentAccepted}
+            onClick={() => {
+              if (!requireConsent()) return;
+              triggerHaptic("light");
+              inputRef.current?.click();
+            }}
+            className="mt-4 h-11 w-full gap-2 rounded-xl bg-navy text-white hover:bg-navy/90 active:scale-[0.98]"
+          >
+            {isBusy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Sparkles className="size-4" />
+            )}
+            {state === "uploading"
+              ? "Хадгалж байна…"
+              : state === "quoting"
+                ? "Тооцоолж байна…"
+                : state === "auditing"
+                  ? "Шинжилж байна…"
+                  : "AI шинжилгээ хийх"}
+          </Button>
+          {!isBusy && (
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              1 хуудас = 1 кредит
+            </p>
           )}
-          {state === "uploading"
-            ? "Хадгалж байна…"
-            : state === "quoting"
-              ? "Тооцоолж байна…"
-              : state === "auditing"
-                ? "Шинжилж байна…"
-                : "PDF оруулах"}
-        </Button>
+        </>
       )}
 
       {error && (

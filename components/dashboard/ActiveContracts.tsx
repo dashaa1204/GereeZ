@@ -65,12 +65,6 @@ function formatDate(iso: string): string {
   });
 }
 
-function scoreBadgeClass(score: number): string {
-  if (score >= 80) return "bg-success/10 text-success";
-  if (score >= 60) return "bg-warning/10 text-warning";
-  return "bg-destructive/10 text-destructive";
-}
-
 function scoreTextClass(score: number): string {
   if (score >= 80) return "text-success";
   if (score >= 60) return "text-warning";
@@ -81,6 +75,12 @@ function scoreLabel(score: number): string {
   if (score >= 80) return "Сайн байдал";
   if (score >= 60) return "Дунд түвшин";
   return "Анхаарах шаардлагатай";
+}
+
+function scoreBarClass(score: number): string {
+  if (score >= 80) return "bg-success";
+  if (score >= 60) return "bg-warning";
+  return "bg-destructive";
 }
 
 function sortAlertsBySeverity<T extends { severity: AlertSeverity }>(alerts: T[]): T[] {
@@ -275,32 +275,43 @@ function ContractRow({
               {expiry}
             </span>
           )}
+
+          {contract.compliance_score != null && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all",
+                    scoreBarClass(contract.compliance_score),
+                  )}
+                  style={{ width: `${contract.compliance_score}%` }}
+                />
+              </div>
+              <span
+                className={cn(
+                  "shrink-0 text-xs font-bold tabular-nums",
+                  scoreTextClass(contract.compliance_score),
+                )}
+              >
+                {contract.compliance_score}
+              </span>
+            </div>
+          )}
         </div>
 
-        {contract.compliance_score != null && !expanded ? (
+        {contract.compliance_score == null && pill && (
           <span
             className={cn(
-              "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums",
-              scoreBadgeClass(contract.compliance_score),
+              "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+              pill.className,
             )}
           >
-            {contract.compliance_score}
+            {(contract.status === "processing" || contract.status === "pending") && (
+              <Loader2 className="size-3 animate-spin" />
+            )}
+            {pill.label}
           </span>
-        ) : contract.compliance_score == null ? (
-          pill && (
-            <span
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                pill.className,
-              )}
-            >
-              {(contract.status === "processing" || contract.status === "pending") && (
-                <Loader2 className="size-3 animate-spin" />
-              )}
-              {pill.label}
-            </span>
-          )
-        ) : null}
+        )}
 
         <ChevronDown
           className={cn(
