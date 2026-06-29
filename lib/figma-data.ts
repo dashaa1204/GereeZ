@@ -1,14 +1,16 @@
-import { getDashboardData } from "./contracts";
+import { cache } from "react";
+import { getDashboardData, type DashboardAlert } from "./contracts";
 import { getAuthenticatedUser } from "./supabase-server";
 import { getBalance } from "./credits";
 import {
   expiryLabel,
+  formatDateMn,
   getEndDate,
   getMetadata,
   getStartDate,
   getTrackStatus,
 } from "./tracking";
-import type { AuditAlert, Contract } from "./types/contract";
+import type { AlertSeverity, AuditAlert, Contract } from "./types/contract";
 
 /** One audit finding in the Figma display shape. */
 export interface FigmaFinding {
@@ -43,10 +45,25 @@ export interface FigmaContractVM {
   expiry: string | null;
 }
 
+/** A notification mapped to what the Figma alerts screen renders. */
+export interface FigmaAlertVM {
+  /** Stable id used as the React key and for marking-as-read. */
+  id: string;
+  type: "compliance" | "expiry";
+  severity: AlertSeverity;
+  /** Contract this alert belongs to (file name — real contracts have no address). */
+  contractName: string;
+  title: string;
+  body: string;
+  /** ISO `YYYY-MM-DD`; formatted for display in the UI. Empty when unknown. */
+  date: string;
+  read: boolean;
+}
+
 /**
- * Real data for the ported Figma UI (`FigmaApp`). Fetched server-side and passed
- * into the client component, which falls back to dummy values when a field is
- * missing or the list is empty.
+ * Real data for the app screens (`components/app/`). Fetched server-side and
+ * passed into the screen components, which fall back to dummy values when a
+ * field is missing or the list is empty.
  */
 export interface FigmaData {
   userName: string | null;
@@ -57,6 +74,7 @@ export interface FigmaData {
   expiringSoon: number;
   highRiskCount: number;
   contracts: FigmaContractVM[];
+  alerts: FigmaAlertVM[];
 }
 
 const CONFIDENCE_PCT: Record<string, number> = { high: 95, medium: 78, low: 58 };
@@ -105,8 +123,76 @@ export function mapContract(c: Contract): FigmaContractVM {
   };
 }
 
-export async function loadFigmaData(): Promise<FigmaData> {
-  const { contracts: rawContracts, metrics } = await getDashboardData();
+const SEVERITY_RANK: Record<AlertSeverity, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+  info: 3,
+};
+
+/**
+ * Build the alerts feed from two real sources: per-clause compliance alerts
+ * (already severity-sorted by `getDashboardData`) and expiry alerts derived
+ * from each contract's tracking status. Read-state isn't persisted yet, so
+ * everything starts unread; the UI tracks reads locally.
+ */
+export function buildAlerts(
+  contracts: Contract[],
+  dashboardAlerts: DashboardAlert[],
+): FigmaAlertVM[] {
+  // Compliance alerts carry no per-alert timestamp; use the contract's last
+  // update (when the audit completed) as the alert date.
+  const dateById = new Map(
+    contracts.map((c) => [c.id, c.updated_at?.slice(0, 10) ?? ""]),
+  );
+
+  const compliance: FigmaAlertVM[] = dashboardAlerts.map((a, i) => ({
+    id: `c-${a.contractId}-${i}`,
+    type: "compliance",
+    severity: a.severity,
+    contractName: a.contractName,
+    title: a.title,
+    body: a.description,
+    date: dateById.get(a.contractId) ?? "",
+    read: false,
+  }));
+
+  const expiry: FigmaAlertVM[] = [];
+  for (const c of contracts) {
+    const status = getTrackStatus(c);
+    if (status !== "expiring-soon" && status !== "expired") continue;
+    const end = getEndDate(c);
+    const endLabel = formatDateMn(end) ?? end ?? "—";
+    const expired = status === "expired";
+    expiry.push({
+      id: `e-${c.id}`,
+      type: "expiry",
+      severity: expired ? "high" : "medium",
+      contractName: c.file_name,
+      title: expired ? "Гэрээний хугацаа дууссан" : "Гэрээ удахгүй дуусна",
+      body: expired
+        ? `Гэрээ ${endLabel}-нд дууссан. Сунгах эсвэл шинэчлэх шаардлагатай эсэхээ шалгана уу.`
+        : `Гэрээ ${endLabel}-нд дуусна. Сунгах эсэхээ эзэмшигчтэй урьдчилан ярилцана уу.`,
+      date: end ?? "",
+      read: false,
+    });
+  }
+
+  return [...compliance, ...expiry].sort((a, b) => {
+    const rank = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+    if (rank !== 0) return rank;
+    return b.date.localeCompare(a.date);
+  });
+}
+
+// Cached per request so the (app) layout (badge count) and the page within it
+// share a single fetch.
+export const loadFigmaData = cache(async (): Promise<FigmaData> => {
+  const {
+    contracts: rawContracts,
+    metrics,
+    alerts: dashboardAlerts,
+  } = await getDashboardData();
   const expiringSoon = rawContracts.filter(
     (c) => getTrackStatus(c) === "expiring-soon",
   ).length;
@@ -136,5 +222,6 @@ export async function loadFigmaData(): Promise<FigmaData> {
     expiringSoon,
     highRiskCount: metrics.highRiskCount,
     contracts: rawContracts.map(mapContract),
+    alerts: buildAlerts(rawContracts, dashboardAlerts),
   };
-}
+});
