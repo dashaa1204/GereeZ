@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,33 +25,47 @@ export default function LegalSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const loadContent = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchAllSiteContent();
-      setItems(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ачаалахад алдаа");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadContent();
-    const stored = sessionStorage.getItem(ADMIN_SECRET_KEY);
-    if (stored) setAdminSecret(stored);
-  }, [loadContent]);
-
-  useEffect(() => {
-    const active = items.find((item) => item.slug === activeSlug);
+  // Applies the editable fields from the matching item. Called from events
+  // (initial load, tab switch) rather than an effect to avoid setState-in-effect
+  // cascades.
+  function applyActiveItem(source: SiteContent[], slug: SiteContentSlug) {
+    const active = source.find((item) => item.slug === slug);
     if (active) {
       setTitle(active.title);
       setContent(active.content);
       setSaved(false);
     }
-  }, [activeSlug, items]);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchAllSiteContent();
+        if (cancelled) return;
+        setItems(data);
+        applyActiveItem(data, activeSlug);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Ачаалахад алдаа");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+      const stored = sessionStorage.getItem(ADMIN_SECRET_KEY);
+      if (stored && !cancelled) setAdminSecret(stored);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Mount-only load; activeSlug is its initial default here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleSelectSlug(slug: SiteContentSlug) {
+    setActiveSlug(slug);
+    applyActiveItem(items, slug);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -119,7 +133,7 @@ export default function LegalSettingsPage() {
             <button
               key={slug}
               type="button"
-              onClick={() => setActiveSlug(slug)}
+              onClick={() => handleSelectSlug(slug)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 activeSlug === slug
                   ? "bg-navy text-white"

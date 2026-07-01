@@ -11,7 +11,6 @@ import {
 export type AuditProvider = "anthropic" | "google";
 
 const GEMINI_AUDIT_MODEL = "gemini-2.0-flash-lite";
-const DEFAULT_ANTHROPIC_AUDIT_MODEL = "claude-haiku-4-5";
 
 export function hasAuditApiKey(): boolean {
   return Boolean(getAnthropicApiKey() || getGoogleApiKey());

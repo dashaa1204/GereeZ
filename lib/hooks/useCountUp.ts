@@ -6,10 +6,7 @@ export function useCountUp(target: number, durationMs = 600, enabled = true) {
   const [value, setValue] = useState(enabled ? 0 : target);
 
   useEffect(() => {
-    if (!enabled) {
-      setValue(target);
-      return;
-    }
+    if (!enabled) return;
 
     const start = performance.now();
     let frame: number;
@@ -25,5 +22,5 @@ export function useCountUp(target: number, durationMs = 600, enabled = true) {
     return () => cancelAnimationFrame(frame);
   }, [target, durationMs, enabled]);
 
-  return value;
+  return enabled ? value : target;
 }

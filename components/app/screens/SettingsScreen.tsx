@@ -85,7 +85,7 @@ export function SettingsScreen({
       </div>
 
       <p className="text-center text-xs text-muted-foreground pt-2">
-        Rent Helper v1.0.0 · Монгол хуулийн нийцлийн систем
+        GereeZ v1.0.0 · Монгол хуулийн нийцлийн систем
       </p>
     </div>
   );

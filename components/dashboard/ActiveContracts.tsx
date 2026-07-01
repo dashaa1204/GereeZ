@@ -180,8 +180,6 @@ function ContractRow({
 
   // An unpaid contract (pending, or failed before/at the charge) needs the
   // payment gate before it can be audited — never a silent charge.
-  // An unpaid contract (pending, or failed before/at the charge) needs the
-  // payment gate before it can be audited — never a silent charge.
   const needsPayment =
     contract.status === "pending" || contract.status === "failed";
   const [quote, setQuote] = useState<AuditQuote | null>(null);
@@ -190,13 +188,16 @@ function ContractRow({
   // Loading is derived (not state) so the effect only sets state in callbacks.
   const loadingQuote = needsPayment && expanded && !quote && !quoteFailed;
 
-  useEffect(() => {
-    if (!expanded) {
+  // Collapsing the row resets its sub-sections so it reopens clean. Done in the
+  // toggle handler (not an effect) to avoid setState-in-effect cascades.
+  const handleToggle = () => {
+    if (expanded) {
       setSummaryExpanded(false);
       setAlertsExpanded(false);
       setStrengthsExpanded(false);
     }
-  }, [expanded]);
+    onToggle();
+  };
 
   // Fetch the quote (pages / cost / balance) when an unpaid contract is opened,
   // so the user sees what they're paying before confirming — same gate as the
@@ -242,7 +243,7 @@ function ContractRow({
     <div className="overflow-hidden rounded-xl border border-border bg-white">
       <button
         type="button"
-        onClick={onToggle}
+        onClick={handleToggle}
         aria-expanded={expanded}
         className="flex w-full items-center gap-3 p-3 text-left transition-colors active:bg-muted/40"
       >
