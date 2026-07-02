@@ -2,20 +2,35 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, ShieldCheck, TrendingUp, Upload } from "lucide-react";
+import { CreditCard, Loader2, ShieldCheck, TrendingUp, Upload } from "lucide-react";
+import { CREDIT_PACKS } from "@/lib/credit-packs";
+import { rechargeCredits } from "@/lib/services/credits.client";
 import { fmt } from "../display";
 
 export function PaymentScreen({ credits }: { credits: number }) {
   const router = useRouter();
-  // Top-up is visual-only for now (not wired to a real recharge endpoint), so
-  // the displayed balance is local state seeded from the real server balance.
   const [balance, setBalance] = useState(credits);
   const [selected, setSelected] = useState<number | null>(null);
-  const packs = [
-    { credits: 5, price: 5000, label: "Үндсэн" },
-    { credits: 15, price: 12000, label: "Хэмнэлттэй", popular: true },
-    { credits: 30, price: 20000, label: "Байнгын хэрэглэгч" },
-  ];
+  const [buying, setBuying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const buy = async () => {
+    if (!selected || buying) return;
+    setBuying(true);
+    setError(null);
+    try {
+      const newBalance = await rechargeCredits(selected);
+      setBalance(newBalance);
+      setSelected(null);
+      // Other screens (home hero, contracts list) show the balance too.
+      router.refresh();
+      router.back();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Цэнэглэхэд алдаа гарлаа");
+    } finally {
+      setBuying(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -50,7 +65,7 @@ export function PaymentScreen({ credits }: { credits: number }) {
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">Кредит авах</h3>
         <div className="space-y-2.5">
-          {packs.map((p) => (
+          {CREDIT_PACKS.map((p) => (
             <button
               key={p.credits}
               onClick={() => setSelected(p.credits)}
@@ -86,23 +101,29 @@ export function PaymentScreen({ credits }: { credits: number }) {
         </div>
       </div>
 
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
+      )}
+
       <button
-        onClick={() => {
-          if (selected) {
-            setBalance((c) => c + selected);
-            setSelected(null);
-            router.back();
-          }
-        }}
-        disabled={!selected}
+        onClick={buy}
+        disabled={!selected || buying}
         className={`w-full py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-          selected
+          selected && !buying
             ? "bg-primary text-primary-foreground hover:bg-primary/90"
             : "bg-muted text-muted-foreground cursor-not-allowed"
         }`}
       >
-        <CreditCard className="w-4 h-4" />
-        {selected ? `${selected} кредит худалдан авах` : "Багцаа сонгоно уу"}
+        {buying ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <CreditCard className="w-4 h-4" />
+        )}
+        {buying
+          ? "Цэнэглэж байна…"
+          : selected
+            ? `${selected} кредит худалдан авах`
+            : "Багцаа сонгоно уу"}
       </button>
     </div>
   );

@@ -13,9 +13,21 @@ export async function fetchBalance(): Promise<number> {
   return data.balance as number;
 }
 
-/** Demo top-up: add free credits and return the new balance. */
-export async function rechargeCredits(): Promise<number> {
-  const response = await fetch("/api/credits/recharge", { method: "POST" });
+/**
+ * Demo top-up: add free credits and return the new balance. Without an amount
+ * the server adds its flat demo amount; with one it must match a CREDIT_PACKS
+ * entry (the server validates).
+ */
+export async function rechargeCredits(credits?: number): Promise<number> {
+  const response = await fetch("/api/credits/recharge", {
+    method: "POST",
+    ...(credits != null
+      ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credits }),
+        }
+      : {}),
+  });
   const data = await parseJsonResponse(response, "Цэнэглэхэд алдаа гарлаа");
   return data.balance as number;
 }
