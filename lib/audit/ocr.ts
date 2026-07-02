@@ -6,11 +6,16 @@ const VISION_ENDPOINT = "https://vision.googleapis.com/v1";
 const LANGUAGE_HINTS = ["mn", "ru", "en"];
 
 /**
- * The synchronous Vision PDF endpoint (files:annotate) reads at most the first
- * 5 pages. Scanned PDFs longer than this would be silently truncated, so the
- * caller rejects them instead. Lifting this requires the async GCS endpoint.
+ * The synchronous Vision PDF endpoint (files:annotate) reads at most 5 pages
+ * per request, but accepts an explicit `pages` selection — so longer scanned
+ * PDFs are OCR'd in 5-page chunks with one request each. This ceiling only
+ * bounds the total Vision spend per file (OCR runs before the credit charge,
+ * so it isn't billed to the user).
  */
-export const MAX_OCR_PDF_PAGES = 5;
+export const MAX_OCR_PDF_PAGES = 50;
+
+/** Hard per-request page limit of the sync files:annotate endpoint. */
+const PAGES_PER_REQUEST = 5;
 
 interface VisionTextAnnotation {
   fullTextAnnotation?: { text?: string };
@@ -26,12 +31,13 @@ interface VisionError {
  * accurate on dense Cyrillic documents than a general vision model. The text
  * then flows through the normal Claude RAG audit.
  *
- * Note: the synchronous PDF endpoint reads at most the first 5 pages. Longer
- * scanned contracts need the async (GCS-backed) endpoint — a later step.
+ * For PDFs, pass `pageCount` so pages beyond the first request's limit are
+ * fetched too (in 5-page chunks); without it only the first chunk is read.
  */
 export async function extractTextWithOCR(
   data: Buffer,
   mediaType: string,
+  pageCount = 1,
 ): Promise<string> {
   const apiKey = getGoogleVisionApiKey();
   if (!apiKey) {
@@ -42,7 +48,7 @@ export async function extractTextWithOCR(
 
   const content = data.toString("base64");
   return mediaType === "application/pdf"
-    ? ocrPdf(content, apiKey)
+    ? ocrPdf(content, apiKey, pageCount)
     : ocrImage(content, apiKey);
 }
 
@@ -61,26 +67,45 @@ async function ocrImage(content: string, apiKey: string): Promise<string> {
   return responses?.[0]?.fullTextAnnotation?.text?.trim() ?? "";
 }
 
-async function ocrPdf(content: string, apiKey: string): Promise<string> {
-  const json = await callVision("files:annotate", apiKey, {
-    requests: [
-      {
-        inputConfig: { mimeType: "application/pdf", content },
-        features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
-        imageContext: { languageHints: LANGUAGE_HINTS },
-      },
-    ],
-  });
+async function ocrPdf(
+  content: string,
+  apiKey: string,
+  pageCount: number,
+): Promise<string> {
+  const totalPages = Math.max(1, Math.min(pageCount, MAX_OCR_PDF_PAGES));
 
-  // files:annotate nests a per-page response array inside responses[0].
-  const fileResponse = (json.responses as
-    | Array<{ responses?: VisionTextAnnotation[] }>
-    | undefined)?.[0];
+  // One request per 5-page chunk, sequential to stay far from Vision's rate
+  // limits. Each request re-sends the file, but sync OCR needs no GCS bucket.
+  const parts: string[] = [];
+  for (let start = 1; start <= totalPages; start += PAGES_PER_REQUEST) {
+    const pages = Array.from(
+      { length: Math.min(PAGES_PER_REQUEST, totalPages - start + 1) },
+      (_, i) => start + i,
+    );
+    const json = await callVision("files:annotate", apiKey, {
+      requests: [
+        {
+          inputConfig: { mimeType: "application/pdf", content },
+          features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+          imageContext: { languageHints: LANGUAGE_HINTS },
+          pages,
+        },
+      ],
+    });
 
-  return (fileResponse?.responses ?? [])
-    .map((page) => page.fullTextAnnotation?.text ?? "")
-    .join("\n\n")
-    .trim();
+    // files:annotate nests a per-page response array inside responses[0].
+    const fileResponse = (json.responses as
+      | Array<{ responses?: VisionTextAnnotation[] }>
+      | undefined)?.[0];
+
+    const text = (fileResponse?.responses ?? [])
+      .map((page) => page.fullTextAnnotation?.text ?? "")
+      .join("\n\n")
+      .trim();
+    if (text) parts.push(text);
+  }
+
+  return parts.join("\n\n").trim();
 }
 
 async function callVision(

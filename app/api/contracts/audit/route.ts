@@ -170,14 +170,14 @@ export async function POST(request: Request) {
       }
       contractText = await extractPdfText(buffer);
       if (contractText.length < 50 && !isDemoMode()) {
-        // No embedded text → scanned PDF. Vision's sync endpoint reads only the
-        // first few pages, so reject longer ones rather than audit a fragment.
+        // No embedded text → scanned PDF. OCR runs in 5-page chunks, capped at
+        // MAX_OCR_PDF_PAGES to bound the (unbilled) Vision spend per file.
         if (pageCount > MAX_OCR_PDF_PAGES) {
           return failAudit(
             `Скан хийсэн PDF хэт олон хуудастай байна (${pageCount}). Зурган гэрээг ${MAX_OCR_PDF_PAGES} хүртэл хуудсаар оруулна уу.`,
           );
         }
-        contractText = await extractTextWithOCR(buffer, mediaType);
+        contractText = await extractTextWithOCR(buffer, mediaType, pageCount);
       }
     } else if (mediaType && !isDemoMode()) {
       contractText = await extractTextWithOCR(buffer, mediaType);
