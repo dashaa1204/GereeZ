@@ -1,15 +1,25 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  Bell,
+  AlertTriangle,
+  Check,
   ChevronDown,
   FileText,
   Info,
+  Loader2,
+  LogOut,
   Moon,
+  Pencil,
   ShieldCheck,
   Sun,
-  XCircle,
+  Trash2,
+  X,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase";
+import { deleteAccount } from "@/lib/services/account.client";
 import { useTheme } from "../theme";
 
 export function SettingsScreen({
@@ -19,8 +29,73 @@ export function SettingsScreen({
   userName: string | null;
   userEmail: string | null;
 }) {
+  const router = useRouter();
   const { dark, toggle } = useTheme();
-  const displayName = userName ?? "Батболд Дорж";
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(userName ?? "");
+  const [savingName, setSavingName] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const displayName = userName ?? "—";
+
+  const saveName = async () => {
+    const name = nameDraft.trim();
+    if (!name || savingName) return;
+    setSavingName(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { full_name: name },
+      });
+      if (updateError) throw updateError;
+      setEditingName(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Нэр хадгалахад алдаа гарлаа");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const signOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  };
+
+  const removeAccount = async () => {
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteAccount();
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.replace("/login");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Бүртгэл устгахад алдаа гарлаа");
+      setDeleting(false);
+      setConfirmingDelete(false);
+    }
+  };
+
+  const links = [
+    { icon: <AlertTriangle className="size-4" />, label: "Анхааруулга", href: "/legal/disclaimer" },
+    { icon: <ShieldCheck className="size-4" />, label: "Нууцлалын бодлого", href: "/legal/privacy_policy" },
+    { icon: <FileText className="size-4" />, label: "Үйлчилгээний нөхцөл", href: "/legal/terms_of_service" },
+  ];
 
   return (
     <div className="space-y-5">
@@ -29,16 +104,62 @@ export function SettingsScreen({
         <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold shrink-0 uppercase">
           {displayName.charAt(0)}
         </div>
-        <div className="min-w-0">
-          <p className="font-semibold text-foreground capitalize">{displayName}</p>
-          <p className="text-sm text-muted-foreground truncate">
-            {userEmail ?? "batbold@example.mn"}
-          </p>
-          <span className="inline-block mt-1 text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">
-            Стандарт хэрэглэгч
-          </span>
+        <div className="min-w-0 flex-1">
+          {editingName ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveName()}
+                disabled={savingName}
+                autoFocus
+                maxLength={60}
+                className="h-8 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-primary"
+                placeholder="Таны нэр"
+              />
+              <button
+                onClick={saveName}
+                disabled={savingName || !nameDraft.trim()}
+                aria-label="Нэр хадгалах"
+                className="shrink-0 flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-50"
+              >
+                {savingName ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingName(false);
+                  setNameDraft(userName ?? "");
+                }}
+                disabled={savingName}
+                aria-label="Болих"
+                className="shrink-0 flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <p className="font-semibold text-foreground capitalize truncate">{displayName}</p>
+              <button
+                onClick={() => setEditingName(true)}
+                aria-label="Нэр засах"
+                className="shrink-0 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground truncate">{userEmail ?? "—"}</p>
         </div>
       </div>
+
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 px-0.5">{error}</p>
+      )}
 
       {/* settings rows */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -58,14 +179,10 @@ export function SettingsScreen({
           </button>
         </div>
 
-        {[
-          { icon: <Bell className="size-4" />, label: "Мэдэгдэл тохиргоо" },
-          { icon: <ShieldCheck className="size-4" />, label: "Нууцлал" },
-          { icon: <FileText className="size-4" />, label: "Ашиглалтын нөхцөл" },
-          { icon: <Info className="size-4" />, label: "Тусламж / Холбоо барих" },
-        ].map((row, i, arr) => (
-          <button
-            key={i}
+        {links.map((row, i, arr) => (
+          <Link
+            key={row.href}
+            href={row.href}
             className={`w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/50 transition-colors ${i < arr.length - 1 ? "border-b border-border" : ""}`}
           >
             <div className="flex items-center gap-3 text-muted-foreground">
@@ -73,20 +190,49 @@ export function SettingsScreen({
               <span className="text-sm font-medium text-foreground">{row.label}</span>
             </div>
             <ChevronDown className="-rotate-90 w-4 h-4 text-muted-foreground" />
-          </button>
+          </Link>
         ))}
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <button className="w-full flex items-center gap-3 px-4 py-3.5 text-destructive hover:bg-destructive/5 transition-colors">
-          <XCircle className="size-4" />
+        <button
+          onClick={signOut}
+          disabled={signingOut}
+          className="w-full flex items-center gap-3 px-4 py-3.5 text-foreground hover:bg-muted/50 transition-colors border-b border-border disabled:opacity-50"
+        >
+          {signingOut ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <LogOut className="size-4" />
+          )}
           <span className="text-sm font-medium">Гарах</span>
+        </button>
+        <button
+          onClick={removeAccount}
+          disabled={deleting}
+          className={`w-full flex items-center gap-3 px-4 py-3.5 transition-colors disabled:opacity-50 ${
+            confirmingDelete
+              ? "bg-destructive/10 text-destructive"
+              : "text-destructive hover:bg-destructive/5"
+          }`}
+        >
+          {deleting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Trash2 className="size-4" />
+          )}
+          <span className="text-sm font-medium">
+            {confirmingDelete
+              ? "Дахин дарж баталгаажуулна уу — бүх гэрээ, дата устана"
+              : "Бүртгэл устгах"}
+          </span>
         </button>
       </div>
 
-      <p className="text-center text-xs text-muted-foreground pt-2">
+      <div className="flex items-center justify-center gap-1.5 pt-2 text-xs text-muted-foreground">
+        <Info className="size-3.5" />
         GereeZ v1.0.0 · Монгол хуулийн нийцлийн систем
-      </p>
+      </div>
     </div>
   );
 }

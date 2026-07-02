@@ -22,6 +22,33 @@ export function AuthForm() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const handleForgotPassword = async () => {
+    setError(null);
+    setNotice(null);
+    if (!email) {
+      setError("Имэйл хаягаа оруулаад дахин дарна уу.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email,
+        { redirectTo: `${window.location.origin}/auth/reset-password` },
+      );
+      if (resetError) throw resetError;
+      setNotice("Нууц үг сэргээх холбоосыг имэйлээр илгээлээ. Имэйлээ шалгана уу.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? translateAuthError(err.message)
+          : "Алдаа гарлаа. Дахин оролдоно уу.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -141,6 +168,19 @@ export function AuthForm() {
             </button>
           </div>
         </div>
+
+        {mode === "signin" && (
+          <div className="text-right">
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={loading}
+              className="text-xs font-medium text-navy hover:underline disabled:opacity-50"
+            >
+              Нууц үг мартсан?
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
