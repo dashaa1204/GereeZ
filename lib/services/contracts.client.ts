@@ -52,3 +52,11 @@ export async function auditContract(contractId: string): Promise<Contract> {
   const data = await parseJsonResponse(response, "Шинжилгээ амжилтгүй боллоо");
   return data.contract as Contract;
 }
+
+/** Permanently delete a contract (file + audit). Spent credits stay spent. */
+export async function deleteContract(contractId: string): Promise<void> {
+  const response = await fetch(`/api/contracts/${encodeURIComponent(contractId)}`, {
+    method: "DELETE",
+  });
+  await parseJsonResponse(response, "Гэрээ устгахад алдаа гарлаа");
+}

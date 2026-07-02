@@ -1,21 +1,73 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CreditCard, FileText, Lock, Plus } from "lucide-react";
-import type { FigmaContractVM } from "@/lib/figma-data";
+import {
+  ArrowRight,
+  CreditCard,
+  FileText,
+  Loader2,
+  Lock,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { deleteContract } from "@/lib/services/contracts.client";
+import type { ContractVM } from "@/lib/view-models";
 import { fmtOrDash, scoreColor } from "../display";
 
 export function ContractsScreen({
   contracts,
   credits,
 }: {
-  contracts: FigmaContractVM[];
+  contracts: ContractVM[];
   credits: number;
 }) {
   const router = useRouter();
   const onPayment = () => router.push("/payment");
+  // Two-tap delete: first tap arms the confirm state, second tap deletes.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const statusCfg = (s: FigmaContractVM["status"]) => {
+  const onDelete = async (id: string) => {
+    if (confirmingId !== id) {
+      setConfirmingId(id);
+      setDeleteError(null);
+      return;
+    }
+    setDeletingId(id);
+    try {
+      await deleteContract(id);
+      router.refresh();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Устгахад алдаа гарлаа");
+    } finally {
+      setDeletingId(null);
+      setConfirmingId(null);
+    }
+  };
+
+  const deleteButton = (id: string) => (
+    <button
+      onClick={() => onDelete(id)}
+      disabled={deletingId === id}
+      aria-label="Гэрээ устгах"
+      className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full transition-colors ${
+        confirmingId === id
+          ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
+          : "text-muted-foreground hover:text-red-500"
+      }`}
+    >
+      {deletingId === id ? (
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+      ) : (
+        <Trash2 className="w-3.5 h-3.5" />
+      )}
+      {confirmingId === id && deletingId !== id && "Устгах уу?"}
+    </button>
+  );
+
+  const statusCfg = (s: ContractVM["status"]) => {
     if (s === "compliant") return { label: "Нийцтэй", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40", dot: "bg-emerald-500" };
     if (s === "warning") return { label: "Анхаарах", color: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40", dot: "bg-amber-500" };
     if (s === "pending") return { label: "Хүлээгдэж буй", color: "text-muted-foreground bg-muted", dot: "bg-muted-foreground" };
@@ -46,6 +98,10 @@ export function ContractsScreen({
 
       <h2 className="text-sm font-semibold text-muted-foreground px-0.5">Бүх гэрээ ({contracts.length})</h2>
 
+      {deleteError && (
+        <p className="text-sm text-red-600 dark:text-red-400 px-0.5">{deleteError}</p>
+      )}
+
       {contracts.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-card px-4 py-10 text-center">
           <FileText className="mx-auto w-8 h-8 text-muted-foreground/50" />
@@ -69,6 +125,7 @@ export function ContractsScreen({
                     <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                     {cfg.label}
                   </div>
+                  {deleteButton(c.id)}
                 </div>
                 {/* lock overlay */}
                 <div className="rounded-xl bg-muted border border-border p-4 flex flex-col items-center gap-2.5 text-center">
@@ -105,6 +162,7 @@ export function ContractsScreen({
                 <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                 {cfg.label}
               </div>
+              {deleteButton(c.id)}
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
