@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "ingest:legal": "node --max-old-space-size=4096 ./node_modules/tsx/dist/cli.mjs --env-file=.env.local scripts/ingest-legal.ts"
   },
   "dependencies": {
@@ -40,8 +41,10 @@
     "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "sharp": "^0.35.3",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }

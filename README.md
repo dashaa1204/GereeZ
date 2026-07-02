@@ -24,11 +24,14 @@ MVP starts with **rent and civil-law contracts** in Mongolia. The architecture i
 
 ## Features (current)
 
-- PDF or image contract upload (drag & drop, max 20 MB; scanned/image files are read via the vision model)
+- PDF or image contract upload (drag & drop, max 20 MB; scanned/image files are OCR'd with Google Cloud Vision, up to 50 scanned pages)
 - AI legal audit with compliance score (0–100)
 - Severity-based alerts (`high`, `medium`, `low`, `info`) with law references
 - RAG pipeline against **Иргэний хууль** (Civil Code) via Supabase pgvector
-- Dashboard with live metrics, legal score, alerts, and contract list
+- Contract metadata extraction (parties, rent, deposit, dates) with expiry tracking and in-app alerts (read-state persisted)
+- Credit-based pay-per-audit flow: 1 page = 1 credit, quote → confirm → audit (demo top-up for now — no payment provider yet)
+- Contract and account deletion, password reset, editable profile name
+- Installable as a PWA (web app manifest + icons)
 - Supabase Storage for PDFs + Postgres for audit results
 
 ---
@@ -79,25 +82,26 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Embeddings for RAG
 # Uses GOOGLE_GENERATIVE_AI_API_KEY above
 
+# OCR for scanned PDFs and images — a GCP Console key scoped to the
+# Cloud Vision API (NOT a Gemini/AI Studio key)
+GOOGLE_VISION_API_KEY=...
+
 # Optional
 ANTHROPIC_MODEL=claude-haiku-4-5
 LEGAL_INGEST_SECRET=your-random-secret
 DEMO_MODE=false
-NEXT_PUBLIC_DEMO_MODE=false
+NEXT_PUBLIC_DEMO_UI=false
 ```
 
 ### 3. Database setup
 
-Run migrations in the Supabase SQL Editor (in order):
+For a fresh project, run the combined script `supabase/setup-all.sql` in the
+Supabase SQL Editor — it covers everything: contracts + private bucket +
+per-user RLS, the pgvector legal store, site content, rate limits, credits
+(010), contract tracking dates (011), and alert read-state (012).
 
-1. `supabase/migrations/001_contracts.sql`
-2. `supabase/migrations/002_legal_documents_pgvector.sql`
-3. `supabase/migrations/003_gemini_embeddings_768.sql`
-4. `supabase/migrations/004_site_content.sql`
-5. `supabase/migrations/005_private_contracts_bucket.sql` — makes the contracts bucket private
-6. `supabase/migrations/006_user_auth.sql` — per-user ownership + Row Level Security
-
-Or run the combined script: `supabase/setup-all.sql` (already includes a private bucket and per-user RLS).
+For an existing project, apply only the new numbered files from
+`supabase/migrations/` in order.
 
 ### 3a. Enable authentication
 
@@ -161,18 +165,23 @@ scripts/                    # Ingest & test utilities
 |---------|-------------|
 | `npm run dev` | Start development server |
 | `npm run build` | Production build |
+| `npm run lint` | ESLint |
+| `npm test` | Unit tests (Vitest, in `tests/`) |
 | `npm run ingest:legal` | Ingest Civil Code PDF into vector DB |
-| `npx tsx --env-file=.env.local scripts/test-audit.ts` | Test audit pipeline |
 | `npx tsx --env-file=.env.local scripts/test-env.ts` | Verify env configuration |
+
+CI (GitHub Actions) runs lint + type-check + tests on every push and PR —
+see `.github/workflows/ci.yml`.
 
 ---
 
 ## Roadmap
 
-- [ ] **Phase 1 — Audit** *(current)* — PDF upload, AI score, alerts, dashboard
-- [ ] **Phase 2 — Track** — renewal dates, reminders, contract metadata extraction
-- [ ] **Phase 3 — Manage** — search, filters, version history, multi-contract workspace
-- [ ] **Phase 4 — Expand** — additional law modules, English UI, international markets
+- [x] **Phase 1 — Audit** — PDF upload, AI score, alerts, dashboard
+- [x] **Phase 2 — Track** — expiry dates, contract metadata extraction, in-app alerts
+- [ ] **Phase 3 — Monetize** — real payment provider (QPay), и-баримт, email/push reminders
+- [ ] **Phase 4 — Manage** — search, filters, version history, multi-contract workspace
+- [ ] **Phase 5 — Expand** — additional law modules, English UI, international markets
 
 ---
 
