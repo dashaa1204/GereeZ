@@ -1,19 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
-import type { FigmaAlertVM } from "@/lib/figma-data";
+import type { AlertVM } from "@/lib/view-models";
+import { markAlertsRead } from "@/lib/services/alerts.client";
 import { formatDateMn } from "@/lib/tracking";
 import { severityConfig } from "../display";
 
-export function AlertsScreen({ initialAlerts }: { initialAlerts: FigmaAlertVM[] }) {
+export function AlertsScreen({ initialAlerts }: { initialAlerts: AlertVM[] }) {
+  const router = useRouter();
   const [alerts, setAlerts] = useState(initialAlerts);
   const unread = alerts.filter((a) => !a.read).length;
 
-  const markRead = (id: string) =>
+  // Optimistic: flip locally right away, persist in the background, and
+  // refresh the route so the layout's unread badge follows. A failed persist
+  // only means the mark reverts on next load — not worth blocking the tap.
+  const persist = (ids: string[]) => {
+    markAlertsRead(ids)
+      .then(() => router.refresh())
+      .catch((err) => console.error("markAlertsRead failed:", err));
+  };
+
+  const markRead = (id: string) => {
+    if (alerts.find((a) => a.id === id)?.read) return;
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
-  const markAllRead = () =>
+    persist([id]);
+  };
+  const markAllRead = () => {
+    const unreadIds = alerts.filter((a) => !a.read).map((a) => a.id);
     setAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
+    persist(unreadIds);
+  };
 
   return (
     <div className="space-y-4">

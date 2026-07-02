@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { getReadAlertIds } from "./alerts";
 import { getDashboardData, type DashboardAlert } from "./contracts";
 import { getAuthenticatedUser } from "./supabase-server";
 import { getBalance } from "./credits";
@@ -12,8 +13,8 @@ import {
 } from "./tracking";
 import type { AlertSeverity, AuditAlert, Contract } from "./types/contract";
 
-/** One audit finding in the Figma display shape. */
-export interface FigmaFinding {
+/** One audit finding in the shape the screens render. */
+export interface AuditFinding {
   id: number;
   severity: "high" | "medium" | "low" | "info";
   clause: string;
@@ -22,8 +23,8 @@ export interface FigmaFinding {
   confidence: number;
 }
 
-/** A contract mapped from the real DB shape to what the Figma screens render. */
-export interface FigmaContractVM {
+/** A contract mapped from the real DB shape to what the app screens render. */
+export interface ContractVM {
   id: string;
   /** Primary label — real contracts have no address, so use the file name. */
   label: string;
@@ -40,13 +41,13 @@ export interface FigmaContractVM {
   paid: boolean;
   pages: number | null;
   summary: string | null;
-  findings: FigmaFinding[];
+  findings: AuditFinding[];
   strengths: string[];
   expiry: string | null;
 }
 
-/** A notification mapped to what the Figma alerts screen renders. */
-export interface FigmaAlertVM {
+/** A notification mapped to what the alerts screen renders. */
+export interface AlertVM {
   /** Stable id used as the React key and for marking-as-read. */
   id: string;
   type: "compliance" | "expiry";
@@ -65,7 +66,7 @@ export interface FigmaAlertVM {
  * passed into the screen components, which fall back to dummy values when a
  * field is missing or the list is empty.
  */
-export interface FigmaData {
+export interface AppData {
   userName: string | null;
   userEmail: string | null;
   credits: number;
@@ -73,13 +74,13 @@ export interface FigmaData {
   averageCompliance: number | null;
   expiringSoon: number;
   highRiskCount: number;
-  contracts: FigmaContractVM[];
-  alerts: FigmaAlertVM[];
+  contracts: ContractVM[];
+  alerts: AlertVM[];
 }
 
 const CONFIDENCE_PCT: Record<string, number> = { high: 95, medium: 78, low: 58 };
 
-function mapAlert(a: AuditAlert, i: number): FigmaFinding {
+function mapAlert(a: AuditAlert, i: number): AuditFinding {
   const clause = a.contractClause ? `${a.contractClause} — ${a.title}` : a.title;
   const article =
     [a.lawName, a.articleReference].filter(Boolean).join(" ").trim() || "—";
@@ -93,14 +94,14 @@ function mapAlert(a: AuditAlert, i: number): FigmaFinding {
   };
 }
 
-function statusOf(c: Contract): FigmaContractVM["status"] {
+function statusOf(c: Contract): ContractVM["status"] {
   if (c.status !== "completed" || c.compliance_score == null) return "pending";
   if (c.compliance_score >= 75) return "compliant";
   if (c.compliance_score >= 50) return "warning";
   return "risk";
 }
 
-export function mapContract(c: Contract): FigmaContractVM {
+export function mapContract(c: Contract): ContractVM {
   const meta = getMetadata(c);
   return {
     id: c.id,
@@ -115,7 +116,7 @@ export function mapContract(c: Contract): FigmaContractVM {
     score: c.compliance_score,
     status: statusOf(c),
     paid: c.status === "completed",
-    pages: null,
+    pages: c.page_count,
     summary: c.audit_summary?.summary ?? null,
     findings: (c.audit_summary?.alerts ?? []).map(mapAlert),
     strengths: c.audit_summary?.strengths ?? [],
@@ -133,39 +134,54 @@ const SEVERITY_RANK: Record<AlertSeverity, number> = {
 /**
  * Build the alerts feed from two real sources: per-clause compliance alerts
  * (already severity-sorted by `getDashboardData`) and expiry alerts derived
- * from each contract's tracking status. Read-state isn't persisted yet, so
- * everything starts unread; the UI tracks reads locally.
+ * from each contract's tracking status. Read-state comes from the
+ * `alert_reads` table (see lib/alerts.ts), keyed by the ids built here — so
+ * the ids must stay stable across requests for a given audit result.
  */
 export function buildAlerts(
   contracts: Contract[],
   dashboardAlerts: DashboardAlert[],
-): FigmaAlertVM[] {
+  readIds: ReadonlySet<string> = new Set(),
+): AlertVM[] {
   // Compliance alerts carry no per-alert timestamp; use the contract's last
   // update (when the audit completed) as the alert date.
   const dateById = new Map(
     contracts.map((c) => [c.id, c.updated_at?.slice(0, 10) ?? ""]),
   );
 
-  const compliance: FigmaAlertVM[] = dashboardAlerts.map((a, i) => ({
-    id: `c-${a.contractId}-${i}`,
-    type: "compliance",
-    severity: a.severity,
-    contractName: a.contractName,
-    title: a.title,
-    body: a.description,
-    date: dateById.get(a.contractId) ?? "",
-    read: false,
-  }));
+  // Number alerts within their own contract, not across the whole feed:
+  // another contract's audit must not shift these ids (that would corrupt
+  // persisted read marks). Re-auditing a contract may reorder its own alerts —
+  // acceptable, new findings deserve to show as unread.
+  const perContractSeq = new Map<string, number>();
+  const compliance: AlertVM[] = dashboardAlerts.map((a) => {
+    const seq = perContractSeq.get(a.contractId) ?? 0;
+    perContractSeq.set(a.contractId, seq + 1);
+    const id = `c-${a.contractId}-${seq}`;
+    return {
+      id,
+      type: "compliance",
+      severity: a.severity,
+      contractName: a.contractName,
+      title: a.title,
+      body: a.description,
+      date: dateById.get(a.contractId) ?? "",
+      read: readIds.has(id),
+    };
+  });
 
-  const expiry: FigmaAlertVM[] = [];
+  const expiry: AlertVM[] = [];
   for (const c of contracts) {
     const status = getTrackStatus(c);
     if (status !== "expiring-soon" && status !== "expired") continue;
     const end = getEndDate(c);
     const endLabel = formatDateMn(end) ?? end ?? "—";
     const expired = status === "expired";
+    // The status is part of the id so the escalation from "expiring soon" to
+    // "expired" surfaces as a fresh unread alert.
+    const id = `e-${c.id}-${status}`;
     expiry.push({
-      id: `e-${c.id}`,
+      id,
       type: "expiry",
       severity: expired ? "high" : "medium",
       contractName: c.file_name,
@@ -174,7 +190,7 @@ export function buildAlerts(
         ? `Гэрээ ${endLabel}-нд дууссан. Сунгах эсвэл шинэчлэх шаардлагатай эсэхээ шалгана уу.`
         : `Гэрээ ${endLabel}-нд дуусна. Сунгах эсэхээ эзэмшигчтэй урьдчилан ярилцана уу.`,
       date: end ?? "",
-      read: false,
+      read: readIds.has(id),
     });
   }
 
@@ -187,7 +203,7 @@ export function buildAlerts(
 
 // Cached per request so the (app) layout (badge count) and the page within it
 // share a single fetch.
-export const loadFigmaData = cache(async (): Promise<FigmaData> => {
+export const loadAppData = cache(async (): Promise<AppData> => {
   const {
     contracts: rawContracts,
     metrics,
@@ -197,17 +213,27 @@ export const loadFigmaData = cache(async (): Promise<FigmaData> => {
     (c) => getTrackStatus(c) === "expiring-soon",
   ).length;
 
-  // getBalance uses the service-role client; never let a missing env crash the
-  // page render — fall back to 0 credits and no user.
+  // getBalance/getReadAlertIds use the service-role client; never let a
+  // missing env crash the page render — fall back to 0 credits, no user, and
+  // nothing marked read.
   let credits = 0;
   let userName: string | null = null;
   let userEmail: string | null = null;
+  let readIds: Set<string> = new Set();
   try {
     const user = await getAuthenticatedUser();
     if (user) {
       userEmail = user.email ?? null;
-      userName = user.email?.split("@")[0] ?? null;
-      credits = await getBalance(user.id);
+      // Prefer the profile name the user set; fall back to the email prefix.
+      const fullName = user.user_metadata?.full_name;
+      userName =
+        (typeof fullName === "string" && fullName.trim()) ||
+        user.email?.split("@")[0] ||
+        null;
+      [credits, readIds] = await Promise.all([
+        getBalance(user.id),
+        getReadAlertIds(user.id),
+      ]);
     }
   } catch {
     credits = 0;
@@ -222,6 +248,6 @@ export const loadFigmaData = cache(async (): Promise<FigmaData> => {
     expiringSoon,
     highRiskCount: metrics.highRiskCount,
     contracts: rawContracts.map(mapContract),
-    alerts: buildAlerts(rawContracts, dashboardAlerts),
+    alerts: buildAlerts(rawContracts, dashboardAlerts, readIds),
   };
 });

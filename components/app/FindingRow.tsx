@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp, FileText } from "lucide-react";
-import type { FigmaFinding } from "@/lib/figma-data";
+import type { AuditFinding } from "@/lib/view-models";
 import { severityConfig } from "./display";
 
-export function FindingRow({ f }: { f: FigmaFinding }) {
+export function FindingRow({ f }: { f: AuditFinding }) {
   const [open, setOpen] = useState(false);
   const cfg = severityConfig(f.severity);
 

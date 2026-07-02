@@ -12,12 +12,12 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import type { FigmaContractVM } from "@/lib/figma-data";
+import type { ContractVM } from "@/lib/view-models";
 import { fmtOrDash, scoreLabel } from "../display";
 import { ScoreRing } from "../ScoreRing";
 import { FindingRow } from "../FindingRow";
 
-export function AuditScreen({ contract }: { contract: FigmaContractVM }) {
+export function AuditScreen({ contract }: { contract: ContractVM }) {
   const [tab, setTab] = useState<"findings" | "strengths" | "meta">("findings");
   const findings = contract.findings;
   const strengths = contract.strengths;

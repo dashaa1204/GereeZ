@@ -1,7 +1,7 @@
 import { PaymentScreen } from "@/components/app/screens/PaymentScreen";
-import { loadFigmaData } from "@/lib/figma-data";
+import { loadAppData } from "@/lib/view-models";
 
 export default async function PaymentPage() {
-  const data = await loadFigmaData();
+  const data = await loadAppData();
   return <PaymentScreen credits={data.credits} />;
 }

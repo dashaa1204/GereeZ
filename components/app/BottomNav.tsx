@@ -19,7 +19,7 @@ export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
       <div className="flex">
         {tabItems.map((t) => {
           // Active only on the exact tab route — audit (/contracts/[id]) and
-          // payment are sub-screens with no active tab, like the figma shell.
+          // payment are sub-screens with no active tab, like the original design.
           const active = pathname === t.href;
           const Icon = t.icon;
           const badge = t.href === "/alerts" ? unreadCount : 0;

@@ -20,6 +20,7 @@ export function getDemoContract(): Contract {
     status: "completed",
     start_date: "2024-09-01",
     end_date: "2025-09-01",
+    page_count: 6,
     created_at: now,
     updated_at: now,
     audit_summary: {

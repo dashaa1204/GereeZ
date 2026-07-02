@@ -1,7 +1,7 @@
 import { SettingsScreen } from "@/components/app/screens/SettingsScreen";
-import { loadFigmaData } from "@/lib/figma-data";
+import { loadAppData } from "@/lib/view-models";
 
 export default async function SettingsPage() {
-  const data = await loadFigmaData();
+  const data = await loadAppData();
   return <SettingsScreen userName={data.userName} userEmail={data.userEmail} />;
 }

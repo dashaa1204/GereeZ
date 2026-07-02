@@ -1,7 +1,7 @@
 import { AlertsScreen } from "@/components/app/screens/AlertsScreen";
-import { loadFigmaData } from "@/lib/figma-data";
+import { loadAppData } from "@/lib/view-models";
 
 export default async function AlertsPage() {
-  const data = await loadFigmaData();
+  const data = await loadAppData();
   return <AlertsScreen initialAlerts={data.alerts} />;
 }

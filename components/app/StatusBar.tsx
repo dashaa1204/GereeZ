@@ -5,8 +5,8 @@ import { ChevronDown, Moon, Sun } from "lucide-react";
 import { BrandMark } from "./BrandMark";
 import { useTheme } from "./theme";
 
-/** Title + back-button visibility for the current route, mirroring the figma
- *  status bar (sub-screens — audit/payment — show a back chevron). */
+/** Title + back-button visibility for the current route (sub-screens —
+ *  audit/payment — show a back chevron). */
 function chromeFor(pathname: string): { title: string; back: boolean } {
   if (pathname === "/contracts") return { title: "Гэрээнүүд", back: false };
   if (/^\/contracts\/.+/.test(pathname)) return { title: "Аудит дүн", back: true };

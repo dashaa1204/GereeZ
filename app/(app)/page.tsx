@@ -1,10 +1,8 @@
 import { HomeScreen } from "@/components/app/screens/HomeScreen";
-import { DUMMY_VMS } from "@/components/app/dummy";
-import { loadFigmaData } from "@/lib/figma-data";
+import { loadAppData } from "@/lib/view-models";
 
 export default async function HomePage() {
-  const data = await loadFigmaData();
-  const contracts = data.contracts.length > 0 ? data.contracts : DUMMY_VMS;
+  const data = await loadAppData();
   return (
     <HomeScreen
       credits={data.credits}
@@ -12,7 +10,7 @@ export default async function HomePage() {
       activeCount={data.activeCount}
       averageCompliance={data.averageCompliance}
       expiringSoon={data.expiringSoon}
-      recent={contracts[0]}
+      recent={data.contracts[0]}
     />
   );
 }

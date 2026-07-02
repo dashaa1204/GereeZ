@@ -71,6 +71,8 @@ export interface Contract {
   start_date: string | null;
   /** Contract end date (ISO date) — mirrors audit_summary.metadata.endDate. */
   end_date: string | null;
+  /** PDF page count cached by the quote step; null before the first quote. */
+  page_count: number | null;
   created_at: string;
   updated_at: string;
 }

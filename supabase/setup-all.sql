@@ -210,3 +210,165 @@ begin
   return true;
 end;
 $$;
+
+-- ---------- 010: Credits (pay-per-audit) ----------
+
+create table if not exists public.user_credits (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  balance integer not null default 0 check (balance >= 0),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.user_credits enable row level security;
+
+drop policy if exists "read own credits" on public.user_credits;
+create policy "read own credits"
+  on public.user_credits for select
+  using (auth.uid() = user_id);
+
+create table if not exists public.credit_charges (
+  contract_id uuid primary key references public.contracts (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  amount integer not null check (amount > 0),
+  created_at timestamptz not null default now()
+);
+
+alter table public.credit_charges enable row level security;
+-- No policies on purpose: only the service-role client (API routes) touches it.
+
+alter table public.contracts add column if not exists page_count integer;
+
+create or replace function public.grant_initial_credits()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.user_credits (user_id, balance)
+  values (new.id, 100)
+  on conflict (user_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created_grant_credits on auth.users;
+create trigger on_auth_user_created_grant_credits
+  after insert on auth.users
+  for each row execute function public.grant_initial_credits();
+
+insert into public.user_credits (user_id, balance)
+select id, 100 from auth.users
+on conflict (user_id) do nothing;
+
+create or replace function public.charge_credits(
+  p_user uuid,
+  p_contract uuid,
+  p_amount integer
+) returns integer
+language plpgsql
+as $$
+declare
+  v_balance integer;
+begin
+  if exists (select 1 from public.credit_charges where contract_id = p_contract) then
+    select balance into v_balance from public.user_credits where user_id = p_user;
+    return coalesce(v_balance, 0);
+  end if;
+
+  select balance into v_balance from public.user_credits
+    where user_id = p_user
+    for update;
+
+  if v_balance is null then
+    insert into public.user_credits (user_id, balance) values (p_user, 0)
+      on conflict (user_id) do nothing;
+    v_balance := 0;
+  end if;
+
+  if v_balance < p_amount then
+    return -1; -- insufficient funds; caller rejects without auditing
+  end if;
+
+  update public.user_credits
+    set balance = balance - p_amount, updated_at = now()
+    where user_id = p_user;
+
+  insert into public.credit_charges (contract_id, user_id, amount)
+    values (p_contract, p_user, p_amount);
+
+  return v_balance - p_amount;
+end;
+$$;
+
+create or replace function public.refund_credits(
+  p_contract uuid
+) returns integer
+language plpgsql
+as $$
+declare
+  v_user uuid;
+  v_amount integer;
+  v_balance integer;
+begin
+  delete from public.credit_charges
+    where contract_id = p_contract
+    returning user_id, amount into v_user, v_amount;
+
+  if v_user is null then
+    return null; -- nothing to refund
+  end if;
+
+  update public.user_credits
+    set balance = balance + v_amount, updated_at = now()
+    where user_id = v_user
+    returning balance into v_balance;
+
+  return v_balance;
+end;
+$$;
+
+create or replace function public.recharge_credits(
+  p_user uuid,
+  p_amount integer
+) returns integer
+language plpgsql
+as $$
+declare
+  v_balance integer;
+begin
+  insert into public.user_credits (user_id, balance)
+  values (p_user, p_amount)
+  on conflict (user_id) do update
+    set balance = public.user_credits.balance + excluded.balance,
+        updated_at = now();
+
+  select balance into v_balance from public.user_credits where user_id = p_user;
+  return v_balance;
+end;
+$$;
+
+-- ---------- 011: Contract tracking (expiry dates) ----------
+
+alter table public.contracts add column if not exists start_date date;
+alter table public.contracts add column if not exists end_date date;
+
+create index if not exists contracts_end_date_idx
+  on public.contracts (end_date)
+  where end_date is not null;
+
+-- ---------- 012: Alert read-state ----------
+
+create table if not exists public.alert_reads (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  alert_id text not null,
+  read_at timestamptz not null default now(),
+  primary key (user_id, alert_id)
+);
+
+alter table public.alert_reads enable row level security;
+
+drop policy if exists "read own alert reads" on public.alert_reads;
+create policy "read own alert reads"
+  on public.alert_reads for select
+  using (auth.uid() = user_id);

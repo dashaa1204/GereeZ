@@ -1,12 +1,12 @@
 import { AppShell } from "@/components/app/AppShell";
-import { loadFigmaData } from "@/lib/figma-data";
+import { loadAppData } from "@/lib/view-models";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const data = await loadFigmaData();
+  const data = await loadAppData();
   const unreadCount = data.alerts.filter((a) => !a.read).length;
   return <AppShell unreadCount={unreadCount}>{children}</AppShell>;
 }

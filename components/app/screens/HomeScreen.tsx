@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CreditCard, ShieldCheck } from "lucide-react";
-import type { FigmaContractVM } from "@/lib/figma-data";
+import type { ContractVM } from "@/lib/view-models";
 import { ContractUploadFlow } from "../ContractUploadFlow";
 import { scoreColor } from "../display";
 
@@ -14,10 +14,10 @@ export function HomeScreen({
 }: {
   credits: number;
   userName: string | null;
-  activeCount?: number;
-  averageCompliance?: number | null;
-  expiringSoon?: number;
-  recent?: FigmaContractVM;
+  activeCount: number;
+  averageCompliance: number | null;
+  expiringSoon: number;
+  recent?: ContractVM;
 }) {
   return (
     <div className="space-y-5">
@@ -26,7 +26,7 @@ export function HomeScreen({
       <div className="rounded-2xl bg-zinc-900 text-white px-5 py-5">
         <p className="text-sm font-medium opacity-70 mb-1">Сайн байна уу 👋</p>
         <h1 className="text-xl font-bold leading-tight capitalize">
-          {userName ?? "Батболд"}
+          {userName ?? "Тавтай морил"}
         </h1>
         <p className="text-sm opacity-70 mt-1">Таны гэрээнүүдийг хянаж байна.</p>
         <div className="mt-4 flex items-center gap-2">
@@ -44,13 +44,11 @@ export function HomeScreen({
       {/* metric cards */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-xl p-3 text-center">
-          <p className="text-2xl font-bold text-foreground">{activeCount ?? 2}</p>
+          <p className="text-2xl font-bold text-foreground">{activeCount}</p>
           <p className="text-xs text-muted-foreground mt-0.5 leading-tight">Идэвхтэй гэрээ</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-3 text-center">
-          {averageCompliance === undefined ? (
-            <p className="text-2xl font-bold" style={{ color: scoreColor(78) }}>78</p>
-          ) : averageCompliance === null ? (
+          {averageCompliance === null ? (
             <p className="text-2xl font-bold text-foreground">—</p>
           ) : (
             <p className="text-2xl font-bold" style={{ color: scoreColor(averageCompliance) }}>
@@ -60,7 +58,7 @@ export function HomeScreen({
           <p className="text-xs text-muted-foreground mt-0.5 leading-tight">Нийцлийн оноо</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-3 text-center">
-          <p className="text-2xl font-bold text-amber-500">{expiringSoon ?? 1}</p>
+          <p className="text-2xl font-bold text-amber-500">{expiringSoon}</p>
           <p className="text-xs text-muted-foreground mt-0.5 leading-tight">Удахгүй дуусна</p>
         </div>
       </div>
