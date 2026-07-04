@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GereeZ",
+  title: {
+    default: "GereeZ",
+    template: "%s — GereeZ",
+  },
   description: "Монгол улсын гэрээний хуулийн нийцлийг AI-аар шалгах платформ",
   appleWebApp: {
     capable: true,

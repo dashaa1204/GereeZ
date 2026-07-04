@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { BrandMark } from "@/components/app/BrandMark";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+
+export const metadata: Metadata = { title: "Нэвтрэх" };
 
 export default function LoginPage() {
   return (

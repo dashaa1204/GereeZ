@@ -105,6 +105,12 @@ export function PaymentScreen({ credits }: { credits: number }) {
         <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
       )}
 
+      {/* No payment provider is wired up yet — top-ups are free, so say so
+          instead of letting the price labels imply a real charge. */}
+      <p className="text-xs text-muted-foreground text-center">
+        Туршилтын хувилбар: төлбөр төлөгдөхгүй, кредит үнэгүй нэмэгдэнэ.
+      </p>
+
       <button
         onClick={buy}
         disabled={!selected || buying}

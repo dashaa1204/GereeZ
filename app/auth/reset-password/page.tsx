@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { BrandMark } from "@/components/app/BrandMark";
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+
+export const metadata: Metadata = { title: "Нууц үг сэргээх" };
 
 export default function ResetPasswordPage() {
   return (

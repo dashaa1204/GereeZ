@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AuditScreen } from "@/components/app/screens/AuditScreen";
 import { loadAppData } from "@/lib/view-models";
+
+export const metadata: Metadata = { title: "Гэрээний шинжилгээ" };
 
 export default async function AuditPage({
   params,

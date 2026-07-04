@@ -122,7 +122,7 @@ export function ContractUploadFlow() {
 
   const requireConsent = useCallback(() => {
     if (consentAccepted) return true;
-    setError("Гэрээ оруулахын өмнө доорх нөхцөлийг хүлээн зөвшөөрнө үү.");
+    setError("Гэрээ оруулахын өмнө дээрх нөхцөлийг хүлээн зөвшөөрнө үү.");
     setShake(true);
     triggerHaptic("error");
     setTimeout(() => setShake(false), 300);
