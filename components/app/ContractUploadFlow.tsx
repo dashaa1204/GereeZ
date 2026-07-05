@@ -22,6 +22,15 @@ import {
   type AuditQuote,
 } from "@/lib/services/contracts.client";
 import { rechargeCredits } from "@/lib/services/credits.client";
+import { imageFileToJpegBytes } from "@/lib/images.client";
+import {
+  buildPdfFromJpegs,
+  MAX_IMAGE_PAGES,
+  sortPagesForUpload,
+} from "@/lib/images-to-pdf";
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // matches the upload route's limit
+const IMAGE_TYPES = ["image/png", "image/jpeg"];
 
 type UploadState =
   | "idle"
@@ -137,16 +146,36 @@ export function ContractUploadFlow() {
     setTimeout(() => setShake(false), 300);
   }, []);
 
-  const processFile = useCallback(
-    async (file: File) => {
+  const processFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
       if (!requireConsent()) return;
 
-      if (!["application/pdf", "image/png", "image/jpeg"].includes(file.type)) {
-        fail("Зөвхөн PDF эсвэл зураг (PNG, JPG) оруулна уу.");
-        return;
+      const single = files.length === 1 ? files[0] : null;
+      if (single) {
+        if (
+          !["application/pdf", "image/png", "image/jpeg"].includes(single.type)
+        ) {
+          fail("Зөвхөн PDF эсвэл зураг (PNG, JPG) оруулна уу.");
+          return;
+        }
+      } else {
+        // Multiple files = a multi-page photographed contract. PDFs stay
+        // single-file; the images get merged into one PDF client-side so the
+        // server pipeline (quote → OCR → audit) sees one ordinary scanned PDF.
+        if (files.some((f) => !IMAGE_TYPES.includes(f.type))) {
+          fail(
+            "Олон файл сонгохдоо зөвхөн зураг (PNG, JPG) оруулна уу — PDF-г дангаар нь оруулна.",
+          );
+          return;
+        }
+        if (files.length > MAX_IMAGE_PAGES) {
+          fail(`Нэг дор ${MAX_IMAGE_PAGES} хүртэл зураг оруулах боломжтой.`);
+          return;
+        }
       }
-      if (file.size > 20 * 1024 * 1024) {
-        fail("Файл 20 MB-аас бага байх ёстой.");
+      if (files.some((f) => f.size > MAX_FILE_SIZE)) {
+        fail("Файл бүр 20 MB-аас бага байх ёстой.");
         return;
       }
 
@@ -158,6 +187,27 @@ export function ContractUploadFlow() {
 
       try {
         setState("uploading");
+
+        let file = single;
+        if (!file) {
+          const ordered = sortPagesForUpload(files);
+          const pages: Uint8Array[] = [];
+          for (const image of ordered) {
+            pages.push(await imageFileToJpegBytes(image));
+          }
+          const pdfBytes = buildPdfFromJpegs(pages);
+          if (pdfBytes.length > MAX_FILE_SIZE) {
+            fail(
+              "Нийлүүлсэн PDF 20 MB-аас том байна. Цөөн зургаар хувааж оруулна уу.",
+            );
+            return;
+          }
+          const stem = ordered[0].name.replace(/\.[^.]+$/, "");
+          file = new File([pdfBytes], `${stem} (${ordered.length} хуудас).pdf`, {
+            type: "application/pdf",
+          });
+        }
+
         const contract = await uploadContract(file);
         setPendingContractId(contract.id);
 
@@ -203,16 +253,16 @@ export function ContractUploadFlow() {
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) void processFile(file);
+    const files = Array.from(event.target.files ?? []);
+    if (files.length) void processFiles(files);
     event.target.value = "";
   };
 
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
     setDragOver(false);
-    const file = event.dataTransfer.files?.[0];
-    if (file) void processFile(file);
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (files.length) void processFiles(files);
   };
 
   const openPicker = () => {
@@ -227,6 +277,7 @@ export function ContractUploadFlow() {
         ref={inputRef}
         type="file"
         accept="application/pdf,image/png,image/jpeg"
+        multiple
         className="hidden"
         onChange={handleFileChange}
       />
@@ -377,7 +428,7 @@ export function ContractUploadFlow() {
                 <div className="text-center">
                   <p className="font-semibold text-foreground">PDF гэрээ оруулах</p>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    Скан зураг ч мөн боломжтой (OCR)
+                    Зурган гэрээ бол хуудсуудаа нэг дор сонгоорой (OCR)
                   </p>
                 </div>
                 <button

@@ -14,6 +14,29 @@
  */
 export const MAX_IMAGE_PAGES = 50;
 
+export interface PageOrderable {
+  name: string;
+  lastModified: number;
+}
+
+/**
+ * Best-effort page ordering for a multi-photo selection — the OS file picker
+ * does not deliver files in the order the user clicked them. Camera-roll names
+ * that differ only by digits (IMG_0012.jpg, IMG_0013.jpg…) sort by that number;
+ * anything else (UUID exports, mixed names) sorts by capture/download time,
+ * which for photos taken page-by-page is the page order.
+ */
+export function sortPagesForUpload<T extends PageOrderable>(files: T[]): T[] {
+  const nameSkeletons = new Set(files.map((f) => f.name.replace(/\d+/g, "#")));
+  const sequentialNames =
+    nameSkeletons.size === 1 && /\d/.test(files[0]?.name ?? "");
+  return [...files].sort(
+    sequentialNames
+      ? (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })
+      : (a, b) => a.lastModified - b.lastModified,
+  );
+}
+
 /** Long edge of a PDF page in points (11in), so viewers show a sane zoom. */
 const MAX_PAGE_POINTS = 792;
 
@@ -82,7 +105,7 @@ function colorSpaceFor(components: number): string | null {
 }
 
 /** Build a multi-page PDF from JPEG page images (one page per image). */
-export function buildPdfFromJpegs(jpegs: Uint8Array[]): Uint8Array {
+export function buildPdfFromJpegs(jpegs: Uint8Array[]): Uint8Array<ArrayBuffer> {
   if (jpegs.length === 0) {
     throw new Error("Хуудас алга — дор хаяж нэг зураг шаардлагатай");
   }

@@ -3,7 +3,8 @@ import { extractPdfText } from "../lib/pdf";
 import { chunkLegalDocument } from "../lib/legal-chunker";
 
 async function main() {
-  const buffer = await readFile("knowledge-base/ИРГЭНИЙ ХУУЛЬ.pdf");
+  const filePath = process.argv[2] ?? "knowledge-base/ИРГЭНИЙ ХУУЛЬ.pdf";
+  const buffer = await readFile(filePath);
   const text = await extractPdfText(buffer);
   const chunks = chunkLegalDocument(text);
 
