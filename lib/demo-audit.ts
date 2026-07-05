@@ -1,5 +1,6 @@
 import type { AnalyzeContractResult } from "@/lib/audit";
 import { hasAuditApiKey } from "@/lib/ai";
+import { detectContractType } from "@/lib/contract-type";
 
 export function isDemoMode(): boolean {
   if (hasAuditApiKey()) return false;
@@ -50,6 +51,7 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
   });
 
   return {
+    contractType: detectContractType(contractText),
     complianceScore: hasTermination ? 72 : 85,
     summary:
       "[DEMO] Гэрээг Иргэний хуулийн жишээ шалгалтаар үзлээ. Бүрэн RAG шинжилгээний тулд ANTHROPIC_API_KEY нэмнэ үү.",
@@ -66,6 +68,10 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
       startDate: "2024-09-01",
       endDate: "2025-09-01",
       paymentDay: 5,
+      contractTitle: "Түрээсийн гэрээ",
+      tenantLabel: "Түрээслэгч",
+      landlordLabel: "Түрээслүүлэгч",
+      paymentLabel: "Сарын түрээс",
     },
     retrievedContext: {
       matches: [

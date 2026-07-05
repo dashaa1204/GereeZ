@@ -1,25 +1,33 @@
 import { z } from "zod";
 import type { RetrievedLegalContext } from "@/lib/vector-store";
-import type { ContractMetadata } from "@/lib/types/contract";
+import type { ContractType } from "@/lib/types/contract";
 
 /**
  * Structured facts the audit pulls out of the contract for the tracking view.
  * Every field is nullable: the model returns null when the contract does not
- * state it, rather than guessing.
+ * state it, rather than guessing. Field names are rental-flavored but carry
+ * the employment equivalents (employee/employer/salary) — the system prompt
+ * maps them per contract type.
  */
 export const contractMetadataSchema = z.object({
   tenantName: z
     .string()
     .nullable()
-    .describe("Түрээслэгч (хөлслөгч)-ийн нэр. Гэрээнд байхгүй бол null."),
+    .describe(
+      "Түрээслэгч (хөлслөгч) эсвэл ажилтны нэр. Гэрээнд байхгүй бол null.",
+    ),
   landlordName: z
     .string()
     .nullable()
-    .describe("Түрээслүүлэгч (эзэн)-ийн нэр. Гэрээнд байхгүй бол null."),
+    .describe(
+      "Түрээслүүлэгч (эзэн) эсвэл ажил олгогчийн нэр. Гэрээнд байхгүй бол null.",
+    ),
   monthlyRent: z
     .number()
     .nullable()
-    .describe("Сарын түрээсийн төлбөр төгрөгөөр, зөвхөн тоо. Байхгүй бол null."),
+    .describe(
+      "Сарын түрээсийн төлбөр эсвэл сарын үндсэн цалин төгрөгөөр, зөвхөн тоо. Байхгүй бол null.",
+    ),
   deposit: z
     .number()
     .nullable()
@@ -36,11 +44,37 @@ export const contractMetadataSchema = z.object({
     .number()
     .int()
     .nullable()
-    .describe("Сар бүр төлбөр төлөх өдөр (1-31). Байхгүй бол null."),
+    .describe(
+      "Сар бүр төлбөр төлөх эсвэл цалин олгох өдөр (1-31). Байхгүй бол null.",
+    ),
+  contractTitle: z
+    .string()
+    .nullable()
+    .describe(
+      'Гэрээ өөрийгөө юу гэж нэрлэсэн бэ, товчоор — жишээ нь "Түрээсийн гэрээ", "Хөдөлмөрийн гэрээ", "Хамтран ажиллах гэрээ". Тодорхойгүй бол null.',
+    ),
+  tenantLabel: z
+    .string()
+    .nullable()
+    .describe(
+      'tenantName-д бичсэн талыг гэрээнд хэрэглэсэн нэршлээр, 1-2 үг — жишээ нь "Түрээслэгч", "Ажилтан", "Худалдан авагч". Тодорхойгүй бол null.',
+    ),
+  landlordLabel: z
+    .string()
+    .nullable()
+    .describe(
+      'landlordName-д бичсэн талын нэршил, 1-2 үг — жишээ нь "Түрээслүүлэгч", "Ажил олгогч", "Худалдагч". Тодорхойгүй бол null.',
+    ),
+  paymentLabel: z
+    .string()
+    .nullable()
+    .describe(
+      'monthlyRent дүнг гэрээнд юу гэж нэрлэсэн бэ, 1-3 үг — жишээ нь "Сарын түрээс", "Сарын цалин", "Гэрээний үнэ". Тодорхойгүй бол null.',
+    ),
 });
 
 /** All-null metadata for paths that have no extracted facts (demo, cache). */
-export function emptyContractMetadata(): ContractMetadata {
+export function emptyContractMetadata(): z.infer<typeof contractMetadataSchema> {
   return {
     tenantName: null,
     landlordName: null,
@@ -49,6 +83,10 @@ export function emptyContractMetadata(): ContractMetadata {
     startDate: null,
     endDate: null,
     paymentDay: null,
+    contractTitle: null,
+    tenantLabel: null,
+    landlordLabel: null,
+    paymentLabel: null,
   };
 }
 
@@ -89,7 +127,7 @@ export const auditResultSchema = z.object({
   strengths: z
     .array(z.string())
     .describe(
-      "Түрээслэгчид ашигтай эсвэл хуулийн шаардлагад нийцсэн давуу зүйлс — монгол хэлээр. Түрээслэгчийн үүрэг, хязгаарлалт биш. alerts-д орсон асуудалтай ижил сэдэв, заалтыг давхардуулж бүү бич.",
+      "Гэрээний сул талд (түрээслэгч эсвэл ажилтанд) ашигтай эсвэл хуулийн шаардлагад нийцсэн давуу зүйлс — монгол хэлээр. Тухайн этгээдийн үүрэг, хязгаарлалт биш. alerts-д орсон асуудалтай ижил сэдэв, заалтыг давхардуулж бүү бич.",
     ),
   metadata: contractMetadataSchema.describe(
     "Гэрээнээс гаргаж авсан үндсэн мэдээлэл (тал, дүн, огноо) — хяналтын самбарт ашиглана.",
@@ -99,5 +137,7 @@ export const auditResultSchema = z.object({
 export type AuditResultSchema = z.infer<typeof auditResultSchema>;
 
 export interface AnalyzeContractResult extends AuditResultSchema {
+  /** Detected contract type — decides which law the audit cites. */
+  contractType: ContractType;
   retrievedContext: RetrievedLegalContext;
 }

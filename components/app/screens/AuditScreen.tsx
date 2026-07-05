@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
+  FileText,
   User,
   XCircle,
 } from "lucide-react";
@@ -47,6 +48,12 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
               {contract.label}
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
+              {contract.typeLabel && (
+                <div className="flex items-center gap-1.5 bg-muted text-muted-foreground text-xs font-medium px-2.5 py-1 rounded-full">
+                  <FileText className="w-3 h-3" />
+                  {contract.typeLabel}
+                </div>
+              )}
               <div className="flex items-center gap-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs font-medium px-2.5 py-1 rounded-full">
                 <XCircle className="w-3 h-3" />
                 {highCount} өндөр
@@ -119,9 +126,9 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
       {tab === "meta" && (
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           {[
-            { icon: <User className="w-4 h-4" />, label: "Түрээслэгч", value: contract.tenant },
-            { icon: <Building2 className="w-4 h-4" />, label: "Эзэмшигч", value: contract.landlord },
-            { icon: <Banknote className="w-4 h-4" />, label: "Сарын түрээс", value: fmtOrDash(contract.rent) },
+            { icon: <User className="w-4 h-4" />, label: contract.tenantLabel, value: contract.tenant },
+            { icon: <Building2 className="w-4 h-4" />, label: contract.landlordLabel, value: contract.landlord },
+            { icon: <Banknote className="w-4 h-4" />, label: contract.rentLabel, value: fmtOrDash(contract.rent) },
             { icon: <CreditCard className="w-4 h-4" />, label: "Барьцаа", value: fmtOrDash(contract.deposit) },
             { icon: <Calendar className="w-4 h-4" />, label: "Эхлэх огноо", value: contract.startDate },
             { icon: <Calendar className="w-4 h-4" />, label: "Дуусах огноо", value: contract.endDate },

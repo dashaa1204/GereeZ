@@ -119,7 +119,14 @@ export function ContractsScreen({
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground leading-snug truncate">{c.label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Дуусах: {c.endDate}</p>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {c.typeLabel && (
+                        <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md">
+                          {c.typeLabel}
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground">Дуусах: {c.endDate}</span>
+                    </div>
                   </div>
                   <div className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
@@ -156,7 +163,14 @@ export function ContractsScreen({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground leading-snug truncate">{c.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Дуусах: {c.endDate}</p>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  {c.typeLabel && (
+                    <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md">
+                      {c.typeLabel}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">Дуусах: {c.endDate}</span>
+                </div>
               </div>
               <div className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
@@ -174,7 +188,7 @@ export function ContractsScreen({
               <span className="text-xs font-bold" style={{ color: scoreColor(c.score ?? 0) }}>{c.score ?? "—"}</span>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Сарын түрээс: <span className="font-semibold text-foreground">{fmtOrDash(c.rent)}</span></span>
+              <span>{c.rentLabel}: <span className="font-semibold text-foreground">{fmtOrDash(c.rent)}</span></span>
               <span>Барьцаа: <span className="font-semibold text-foreground">{fmtOrDash(c.deposit)}</span></span>
             </div>
             <button

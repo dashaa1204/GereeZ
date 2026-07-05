@@ -1,5 +1,5 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { google } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import {
   getAnthropicApiKey,
   getGoogleApiKey,
@@ -11,6 +11,11 @@ import {
 export type AuditProvider = "anthropic" | "google";
 
 const GEMINI_AUDIT_MODEL = "gemini-2.0-flash-lite";
+
+// The default `google` provider only reads GOOGLE_GENERATIVE_AI_API_KEY;
+// route the key through getGoogleApiKey() so GOOGLE_API_KEY and
+// GEMINI_API_KEY (see lib/env.ts) work too.
+const google = createGoogleGenerativeAI({ apiKey: getGoogleApiKey() });
 
 export function hasAuditApiKey(): boolean {
   return Boolean(getAnthropicApiKey() || getGoogleApiKey());

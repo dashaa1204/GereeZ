@@ -33,6 +33,10 @@ function makeResult(overrides: Partial<AuditResultSchema> = {}): AuditResultSche
       startDate: null,
       endDate: null,
       paymentDay: null,
+      contractTitle: null,
+      tenantLabel: null,
+      landlordLabel: null,
+      paymentLabel: null,
     },
     ...overrides,
   };
@@ -108,6 +112,10 @@ describe("normalizeAuditResult — metadata", () => {
           startDate: "2026-01-15",
           endDate: "2026-12-31",
           paymentDay: 5,
+          contractTitle: "Түрээсийн гэрээ",
+          tenantLabel: "Түрээслэгч",
+          landlordLabel: "Түрээслүүлэгч",
+          paymentLabel: "Сарын түрээс",
         },
       }),
     );
@@ -119,6 +127,10 @@ describe("normalizeAuditResult — metadata", () => {
       startDate: "2026-01-15",
       endDate: "2026-12-31",
       paymentDay: 5,
+      contractTitle: "Түрээсийн гэрээ",
+      tenantLabel: "Түрээслэгч",
+      landlordLabel: "Түрээслүүлэгч",
+      paymentLabel: "Сарын түрээс",
     });
   });
 
@@ -133,6 +145,10 @@ describe("normalizeAuditResult — metadata", () => {
           startDate: "2026-02-31",
           endDate: "31.12.2026",
           paymentDay: null,
+          contractTitle: null,
+          tenantLabel: null,
+          landlordLabel: null,
+          paymentLabel: null,
         },
       }),
     );
@@ -151,6 +167,10 @@ describe("normalizeAuditResult — metadata", () => {
           startDate: null,
           endDate: null,
           paymentDay: 32,
+          contractTitle: null,
+          tenantLabel: null,
+          landlordLabel: null,
+          paymentLabel: null,
         },
       }),
     );

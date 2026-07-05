@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { getReadAlertIds } from "./alerts";
+import { resolveContractLabels } from "./contract-labels";
 import { getDashboardData, type DashboardAlert } from "./contracts";
 import { getAuthenticatedUser } from "./supabase-server";
 import { getBalance } from "./credits";
@@ -28,9 +29,17 @@ export interface ContractVM {
   id: string;
   /** Primary label — real contracts have no address, so use the file name. */
   label: string;
+  /** Contract kind tag («Түрээсийн гэрээ», «Хамтран ажиллах гэрээ»…); null until audited. */
+  typeLabel: string | null;
   tenant: string;
+  /** What the contract calls the `tenant` party (Түрээслэгч, Ажилтан, Худалдан авагч…). */
+  tenantLabel: string;
   landlord: string;
+  /** What the contract calls the `landlord` party (Эзэмшигч, Ажил олгогч, Худалдагч…). */
+  landlordLabel: string;
   rent: number | null;
+  /** What the contract calls the `rent` amount (Сарын түрээс, Сарын цалин…). */
+  rentLabel: string;
   deposit: number | null;
   startDate: string;
   endDate: string;
@@ -103,12 +112,17 @@ function statusOf(c: Contract): ContractVM["status"] {
 
 export function mapContract(c: Contract): ContractVM {
   const meta = getMetadata(c);
+  const labels = resolveContractLabels(meta, c.audit_summary?.contractType);
   return {
     id: c.id,
     label: c.file_name,
+    typeLabel: labels.typeLabel,
     tenant: meta?.tenantName ?? "—",
+    tenantLabel: labels.tenantLabel,
     landlord: meta?.landlordName ?? "—",
+    landlordLabel: labels.landlordLabel,
     rent: meta?.monthlyRent ?? null,
+    rentLabel: labels.rentLabel,
     deposit: meta?.deposit ?? null,
     startDate: getStartDate(c) ?? "—",
     endDate: getEndDate(c) ?? "—",

@@ -1,4 +1,3 @@
-import type { ContractMetadata } from "@/lib/types/contract";
 import { emptyContractMetadata, type AuditResultSchema } from "./schema";
 
 const SEVERITY_DEDUCTIONS = {
@@ -176,10 +175,24 @@ function normalizeAmount(value: number | null): number | null {
   return Math.round(value);
 }
 
+// A party/payment label is one to a few words; anything longer is the model
+// paraphrasing a clause, which reads worse in the UI than the type fallback.
+const MAX_LABEL_LENGTH = 40;
+
+/** Short display label: trimmed, no wrapping quotes/colon; null when empty or runaway. */
+function normalizeLabel(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value
+    .replace(/^[«"'\s]+|[»"':：\s]+$/g, "")
+    .replace(/\s{2,}/g, " ");
+  if (!trimmed || trimmed.length > MAX_LABEL_LENGTH) return null;
+  return trimmed;
+}
+
 /** Validate AI-extracted facts: real dates, positive amounts, sane payment day. */
 function normalizeMetadata(
   metadata: AuditResultSchema["metadata"] | undefined,
-): ContractMetadata {
+): AuditResultSchema["metadata"] {
   if (!metadata) return emptyContractMetadata();
 
   const paymentDay =
@@ -198,17 +211,24 @@ function normalizeMetadata(
     startDate: normalizeDate(metadata.startDate),
     endDate: normalizeDate(metadata.endDate),
     paymentDay,
+    contractTitle: normalizeLabel(metadata.contractTitle),
+    tenantLabel: normalizeLabel(metadata.tenantLabel),
+    landlordLabel: normalizeLabel(metadata.landlordLabel),
+    paymentLabel: normalizeLabel(metadata.paymentLabel),
   };
 }
 
-export function normalizeAuditResult(result: AuditResultSchema): AuditResultSchema {
+export function normalizeAuditResult(
+  result: AuditResultSchema,
+  fallbackLawName = "Иргэний хууль",
+): AuditResultSchema {
   const rawAlerts = result.alerts.map((alert) => ({
     severity: alert.severity,
     confidence: alert.confidence,
     title: sanitizeTextField(alert.title),
     description: sanitizeTextField(alert.description),
     contractClause: sanitizeTextField(alert.contractClause ?? ""),
-    lawName: alert.lawName?.trim() || "Иргэний хууль",
+    lawName: alert.lawName?.trim() || fallbackLawName,
     articleReference: toMongolianArticleReference(alert.articleReference),
   }));
 

@@ -1,5 +1,12 @@
 export type ContractStatus = "pending" | "processing" | "completed" | "failed";
 
+/**
+ * Which body of law the contract falls under: rental contracts are audited
+ * against the Civil Code («Иргэний хууль»), employment contracts against the
+ * Labor Law («Хөдөлмөрийн тухай хууль»). Detected from the contract text.
+ */
+export type ContractType = "rental" | "employment";
+
 export type AlertSeverity = "high" | "medium" | "low" | "info";
 
 export type AlertConfidence = "high" | "medium" | "low";
@@ -42,6 +49,21 @@ export interface ContractMetadata {
   endDate: string | null;
   /** Day of month rent is due (1–31). */
   paymentDay: number | null;
+  /**
+   * Display labels extracted from the contract's own wording, so the UI can
+   * name parties/amounts correctly for any civil-code contract (rental, sale,
+   * cooperation, …), not just the two detected types. Optional: audits stored
+   * before label extraction shipped lack them — resolve via
+   * `resolveContractLabels` (lib/contract-labels.ts), never read directly.
+   */
+  /** What the contract calls itself, e.g. «Түрээсийн гэрээ», «Хамтран ажиллах гэрээ». */
+  contractTitle?: string | null;
+  /** Role word for the tenantName party: Түрээслэгч, Ажилтан, Худалдан авагч… */
+  tenantLabel?: string | null;
+  /** Role word for the landlordName party: Түрээслүүлэгч, Ажил олгогч, Худалдагч… */
+  landlordLabel?: string | null;
+  /** What the monthlyRent amount is called: Сарын түрээс, Сарын цалин, Гэрээний үнэ… */
+  paymentLabel?: string | null;
 }
 
 export interface AuditSummary {
@@ -55,6 +77,8 @@ export interface AuditSummary {
   retrievedArticles?: RetrievedArticle[];
   /** Structured facts for the tracking view. Absent on pre-tracking audits. */
   metadata?: ContractMetadata;
+  /** Detected contract type. Absent on audits stored before type detection shipped (those ran as rental). */
+  contractType?: ContractType;
   demoMode?: boolean;
 }
 

@@ -1,3 +1,4 @@
+import { LAW_NAME_BY_CONTRACT_TYPE, type ContractType } from "@/lib/contract-type";
 import { embedTexts, embedText } from "@/lib/embeddings";
 import { chunkLegalDocument, type LegalChunk } from "@/lib/legal-chunker";
 import { createAdminClient } from "@/lib/supabase-server";
@@ -28,7 +29,7 @@ export interface RetrievedLegalContext {
   contextText: string;
 }
 
-const DEFAULT_LAW_NAME = "Иргэний хууль";
+const DEFAULT_CONTRACT_TYPE: ContractType = "rental";
 
 function buildChunkEmbeddingText(chunk: LegalChunk, lawName: string): string {
   const header = [
@@ -124,17 +125,24 @@ export async function searchLegalDocuments(
   return (data ?? []) as LegalDocumentMatch[];
 }
 
+// ilike terms the keyword fallback uses to pull the most on-topic articles.
+const KEYWORD_FALLBACK_FILTERS: Record<ContractType, string> = {
+  rental: "content.ilike.%түрээс%,content.ilike.%lease%,content.ilike.%түрээсл%",
+  employment:
+    "content.ilike.%цалин%,content.ilike.%хөдөлмөрийн гэрээ%,content.ilike.%ажил олгогч%",
+};
+
 /** Retrieve articles by keyword when Gemini embeddings are unavailable. */
 export async function retrieveLegalContextByKeywords(
-  lawName: string = DEFAULT_LAW_NAME,
+  contractType: ContractType = DEFAULT_CONTRACT_TYPE,
 ): Promise<RetrievedLegalContext> {
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from("legal_documents")
     .select("id, law_name, article_number, section_title, content, metadata")
-    .eq("law_name", lawName)
-    .or("content.ilike.%түрээс%,content.ilike.%lease%,content.ilike.%түрээсл%")
+    .eq("law_name", LAW_NAME_BY_CONTRACT_TYPE[contractType])
+    .or(KEYWORD_FALLBACK_FILTERS[contractType])
     .limit(6);
 
   if (error) {
@@ -153,17 +161,18 @@ export async function retrieveLegalContextByKeywords(
 
   return {
     matches,
-    contextText: formatLegalContext(matches),
+    contextText: formatLegalContext(matches, contractType),
   };
 }
 
-/** Retrieve relevant Civil Code articles for a rental contract (RAG retrieval step). */
+/** Retrieve relevant law articles for a contract (RAG retrieval step). The law is picked by contract type. */
 export async function retrieveLegalContext(
   contractText: string,
-  options?: { lawName?: string },
+  options?: { lawName?: string; contractType?: ContractType },
 ): Promise<RetrievedLegalContext> {
-  const lawName = options?.lawName ?? DEFAULT_LAW_NAME;
-  const queries = buildContractSearchQueries(contractText);
+  const contractType = options?.contractType ?? DEFAULT_CONTRACT_TYPE;
+  const lawName = options?.lawName ?? LAW_NAME_BY_CONTRACT_TYPE[contractType];
+  const queries = buildContractSearchQueries(contractText, contractType);
   const merged = new Map<string, LegalDocumentMatch>();
 
   for (const query of queries) {
@@ -187,13 +196,24 @@ export async function retrieveLegalContext(
 
   return {
     matches,
-    contextText: formatLegalContext(matches),
+    contextText: formatLegalContext(matches, contractType),
   };
 }
 
-export function buildContractSearchQueries(contractText: string): string[] {
+export function buildContractSearchQueries(
+  contractText: string,
+  contractType: ContractType = DEFAULT_CONTRACT_TYPE,
+): string[] {
   const excerpt = contractText.slice(0, 8_000);
-  const keywords = extractTenancyKeywords(contractText);
+  const keywords = extractContractKeywords(contractText, contractType);
+
+  if (contractType === "employment") {
+    return [
+      `Хөдөлмөрийн гэрээ хуулийн нийцэл ${keywords}: ${excerpt.slice(0, 2_000)}`,
+      `Цалин хөлс ажлын цаг амралт гэрээ цуцлах эрх үүрэг: ${keywords}`,
+      `Хөдөлмөрийн тухай хууль хөдөлмөрийн гэрээ: ${excerpt.slice(2_000, 5_000)}`,
+    ];
+  }
 
   return [
     `Түрээсийн гэрээ хуулийн нийцэл ${keywords}: ${excerpt.slice(0, 2_000)}`,
@@ -203,7 +223,7 @@ export function buildContractSearchQueries(contractText: string): string[] {
 }
 
 // Ordered by discriminating value for legal retrieval: specific dispute terms
-// first, generic topic words (which appear in nearly every rental contract) last.
+// first, generic topic words (which appear in nearly every such contract) last.
 const TENANCY_KEYWORDS = [
   "барьцаа",
   "deposit",
@@ -221,22 +241,69 @@ const TENANCY_KEYWORDS = [
   "түрээс",
 ];
 
+const EMPLOYMENT_QUERY_KEYWORDS = [
+  "туршилтын хугацаа",
+  "сахилгын шийтгэл",
+  "илүү цаг",
+  "нөхөн олговор",
+  "чөлөөлөх",
+  "цуцлах",
+  "ээлжийн амралт",
+  "нийгмийн даатгал",
+  "ажлын цаг",
+  "цалин",
+  "ажил олгогч",
+  "ажилтан",
+];
+
+const QUERY_KEYWORDS: Record<
+  ContractType,
+  { keywords: string[]; fallback: string }
+> = {
+  rental: {
+    keywords: TENANCY_KEYWORDS,
+    fallback: "түрээс, барьцаа, төлбөр, цуцлах",
+  },
+  employment: {
+    keywords: EMPLOYMENT_QUERY_KEYWORDS,
+    fallback: "цалин, ажлын цаг, амралт, цуцлах",
+  },
+};
+
 const MAX_QUERY_KEYWORDS = 4;
 
-export function extractTenancyKeywords(text: string): string {
+export function extractContractKeywords(
+  text: string,
+  contractType: ContractType = DEFAULT_CONTRACT_TYPE,
+): string {
+  const { keywords, fallback } = QUERY_KEYWORDS[contractType];
   const lower = text.toLowerCase();
   // Keep only the few most important matches so the search query stays focused
   // on one semantic direction rather than being diluted by every term found.
-  const found = TENANCY_KEYWORDS.filter((keyword) => lower.includes(keyword)).slice(
-    0,
-    MAX_QUERY_KEYWORDS,
-  );
-  return found.length > 0 ? found.join(", ") : "түрээс, барьцаа, төлбөр, цуцлах";
+  const found = keywords
+    .filter((keyword) => lower.includes(keyword))
+    .slice(0, MAX_QUERY_KEYWORDS);
+  return found.length > 0 ? found.join(", ") : fallback;
 }
 
-export function formatLegalContext(matches: LegalDocumentMatch[]): string {
+export function extractTenancyKeywords(text: string): string {
+  return extractContractKeywords(text, "rental");
+}
+
+// What the audit prompt should lean on when retrieval comes back empty.
+const EMPTY_CONTEXT_MESSAGES: Record<ContractType, string> = {
+  rental:
+    "Холбогдох зүйл олдсонгүй. Иргэний хуулийн түрээсийн ерөнхий зарчмууд (287–301 дүгээр зүйл) дээр тулгуурлан шинжил. Иш таталт тодорхой бус бол description-д тодорхой бич.",
+  employment:
+    "Холбогдох зүйл олдсонгүй. Хөдөлмөрийн тухай хуулийн хөдөлмөрийн гэрээний ерөнхий зарчмууд дээр тулгуурлан шинжил. Иш таталт тодорхой бус бол description-д тодорхой бич.",
+};
+
+export function formatLegalContext(
+  matches: LegalDocumentMatch[],
+  contractType: ContractType = DEFAULT_CONTRACT_TYPE,
+): string {
   if (matches.length === 0) {
-    return "Холбогдох зүйл олдсонгүй. Иргэний хуулийн түрээсийн ерөнхий зарчмууд (287–301 дүгээр зүйл) дээр тулгуурлан шинжил. Иш таталт тодорхой бус бол description-д тодорхой бич.";
+    return EMPTY_CONTEXT_MESSAGES[contractType];
   }
 
   return matches

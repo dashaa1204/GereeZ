@@ -227,7 +227,10 @@ export async function POST(request: Request) {
           summary: cachedSummary.summary,
           alerts: cachedSummary.alerts,
           strengths: cachedSummary.strengths ?? [],
-          metadata: cachedSummary.metadata ?? emptyContractMetadata(),
+          // Older cached audits may predate the label fields — fill the gaps.
+          metadata: { ...emptyContractMetadata(), ...cachedSummary.metadata },
+          // Pre-detection audits all ran against the Civil Code as rentals.
+          contractType: cachedSummary.contractType ?? "rental",
           retrievedContext: { matches: [], contextText: "" },
         };
       } else {
@@ -257,6 +260,7 @@ export async function POST(request: Request) {
       alerts: audit.alerts,
       strengths: audit.strengths,
       metadata,
+      contractType: audit.contractType,
       contentHash,
       rawHash,
       retrievedArticles: cachedFromPriorAudit
