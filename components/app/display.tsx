@@ -71,6 +71,31 @@ export function severityConfig(s: Severity) {
   }
 }
 
+/**
+ * How confident the AI is that a finding is a real violation — shown as an
+ * honest three-level badge rather than a fabricated percentage. Distinct from
+ * severity: a low-confidence finding can still be high severity.
+ */
+export function confidenceConfig(c: "high" | "medium" | "low") {
+  switch (c) {
+    case "high":
+      return {
+        label: "Өндөр итгэл",
+        cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
+      };
+    case "medium":
+      return {
+        label: "Дунд итгэл",
+        cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300",
+      };
+    case "low":
+      return {
+        label: "Бага итгэл",
+        cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+      };
+  }
+}
+
 export function scoreColor(s: number) {
   if (s >= 75) return "#16a34a";
   if (s >= 50) return "#d97706";

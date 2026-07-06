@@ -19,9 +19,15 @@ export interface AuditFinding {
   id: number;
   severity: "high" | "medium" | "low" | "info";
   clause: string;
+  /** Combined citation for display, e.g. "Иргэний хууль 296 дүгээр зүйл". */
   article: string;
+  /** Cited law name — used to look up the statute text. Null when absent. */
+  lawName: string | null;
+  /** Cited article reference — used to look up the statute text. Null when absent. */
+  articleRef: string | null;
   explanation: string;
-  confidence: number;
+  /** AI's confidence the issue is real. Null on audits stored before this shipped. */
+  confidenceLevel: "high" | "medium" | "low" | null;
 }
 
 /** A contract mapped from the real DB shape to what the app screens render. */
@@ -87,19 +93,20 @@ export interface AppData {
   alerts: AlertVM[];
 }
 
-const CONFIDENCE_PCT: Record<string, number> = { high: 95, medium: 78, low: 58 };
-
 function mapAlert(a: AuditAlert, i: number): AuditFinding {
   const clause = a.contractClause ? `${a.contractClause} — ${a.title}` : a.title;
-  const article =
-    [a.lawName, a.articleReference].filter(Boolean).join(" ").trim() || "—";
+  const lawName = a.lawName?.trim() || null;
+  const articleRef = a.articleReference?.trim() || null;
+  const article = [lawName, articleRef].filter(Boolean).join(" ").trim() || "—";
   return {
     id: i,
     severity: a.severity,
     clause,
     article,
+    lawName,
+    articleRef,
     explanation: a.description,
-    confidence: a.confidence ? (CONFIDENCE_PCT[a.confidence] ?? 75) : 80,
+    confidenceLevel: a.confidence ?? null,
   };
 }
 

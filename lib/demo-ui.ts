@@ -43,6 +43,7 @@ export function getDemoContract(): Contract {
       alerts: [
         {
           severity: "high",
+          confidence: "high",
           title: "Шудармаг бус цуцлах нөхцөл",
           description:
             "Хугацаанаас өмнө цуцлах торгууль Иргэний хуулийн хамгаалалттай зөрчилдөж болзошгүй. Мэдэгдэл өгөх хугацааг дахин шалгана уу.",
@@ -51,6 +52,7 @@ export function getDemoContract(): Contract {
         },
         {
           severity: "medium",
+          confidence: "medium",
           title: "Барьцааны нөхцөл тодорхой бус",
           description:
             "Барьцаа буцаан олгох хугацаа, нөхцөл тодорхой заагаагүй байна.",
@@ -59,6 +61,7 @@ export function getDemoContract(): Contract {
         },
         {
           severity: "low",
+          confidence: "low",
           title: "Засвар үйлчилгээний хариуцлага",
           description:
             "Жижиг засварын зардлыг хэн хариуцах талаар илүү тодорхой заалт нэмэхийг зөвлөж байна.",
