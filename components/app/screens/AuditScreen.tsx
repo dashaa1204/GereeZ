@@ -17,6 +17,7 @@ import type { ContractVM } from "@/lib/view-models";
 import { fmtOrDash, scoreLabel } from "../display";
 import { ScoreRing } from "../ScoreRing";
 import { FindingRow } from "../FindingRow";
+import { ProposalCard } from "../ProposalCard";
 
 export function AuditScreen({ contract }: { contract: ContractVM }) {
   const [tab, setTab] = useState<"findings" | "strengths" | "meta">("findings");
@@ -70,6 +71,15 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
           </div>
         </div>
       </div>
+
+      {/* Turn the audit into an action: a ready-to-send correction letter. */}
+      {highCount + medCount > 0 && (
+        <ProposalCard
+          contractId={contract.id}
+          issueCount={highCount + medCount}
+          initialProposal={contract.proposal}
+        />
+      )}
 
       {/* tabs */}
       <div className="flex gap-1 bg-muted rounded-xl p-1">

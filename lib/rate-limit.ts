@@ -19,6 +19,8 @@ export const RATE_LIMITS = {
   upload: { limit: 20, windowSeconds: 3600 },
   // The audit call hits the AI provider directly — the main cost gate.
   audit: { limit: 20, windowSeconds: 3600 },
+  // Correction-letter generation is another AI call; cap it per user/hour.
+  proposal: { limit: 30, windowSeconds: 3600 },
 } satisfies Record<string, RateLimitRule>;
 
 /**

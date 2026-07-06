@@ -59,6 +59,8 @@ export interface ContractVM {
   findings: AuditFinding[];
   strengths: string[];
   expiry: string | null;
+  /** Previously generated correction letter, or null if none saved yet. */
+  proposal: string | null;
 }
 
 /** A notification mapped to what the alerts screen renders. */
@@ -142,6 +144,7 @@ export function mapContract(c: Contract): ContractVM {
     findings: (c.audit_summary?.alerts ?? []).map(mapAlert),
     strengths: c.audit_summary?.strengths ?? [],
     expiry: expiryLabel(c),
+    proposal: c.audit_summary?.proposal ?? null,
   };
 }
 

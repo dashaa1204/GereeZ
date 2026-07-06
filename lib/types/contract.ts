@@ -79,6 +79,8 @@ export interface AuditSummary {
   metadata?: ContractMetadata;
   /** Detected contract type. Absent on audits stored before type detection shipped (those ran as rental). */
   contractType?: ContractType;
+  /** Cached correction letter generated from this audit, so it survives navigation. */
+  proposal?: string;
   demoMode?: boolean;
 }
 
