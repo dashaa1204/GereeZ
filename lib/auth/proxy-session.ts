@@ -1,8 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isDemoAutoLoginEnabled } from "@/lib/demo-user";
 
 /** Paths reachable without an authenticated session. */
-const PUBLIC_PREFIXES = ["/login", "/legal", "/auth"];
+const PUBLIC_PREFIXES = ["/login", "/legal", "/auth", "/demo"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some(
@@ -55,6 +56,14 @@ export async function updateSession(
 
   if (!user && !isPublicPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();
+    // With a demo account configured, a first-time visitor is signed into it
+    // rather than being asked to register — /login is still reachable directly.
+    if (isDemoAutoLoginEnabled()) {
+      redirectUrl.pathname = "/demo";
+      redirectUrl.search = "";
+      redirectUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);

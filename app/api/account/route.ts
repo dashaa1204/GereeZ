@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { formatUserError } from "@/lib/api-errors";
+import { isDemoEmail } from "@/lib/demo-user";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   CONTRACTS_BUCKET,
@@ -19,6 +20,15 @@ export async function DELETE() {
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Нэвтэрнэ үү" }, { status: 401 });
+    }
+
+    // The demo account is shared by every visitor — one of them deleting it
+    // would take the public demo down with it.
+    if (isDemoEmail(user.email)) {
+      return NextResponse.json(
+        { error: "Демо бүртгэлийг устгах боломжгүй. Өөрийн бүртгэл үүсгэнэ үү." },
+        { status: 403 },
+      );
     }
 
     const rateLimit = await checkRateLimit("upload", user.id);

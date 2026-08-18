@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { formatUserError } from "@/lib/api-errors";
+import { isDemoEmail } from "@/lib/demo-user";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   CONTRACTS_BUCKET,
@@ -22,6 +23,15 @@ export async function DELETE(
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Нэвтэрнэ үү" }, { status: 401 });
+    }
+
+    // Seeded demo contracts are what a visitor came to look at — keep the next
+    // visitor from arriving to an empty account.
+    if (isDemoEmail(user.email)) {
+      return NextResponse.json(
+        { error: "Демо горимд гэрээ устгах боломжгүй." },
+        { status: 403 },
+      );
     }
 
     const rateLimit = await checkRateLimit("upload", user.id);

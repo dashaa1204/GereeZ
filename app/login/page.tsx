@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ShieldCheck, Sparkles, Upload } from "lucide-react";
+import { Eye, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { BrandMark } from "@/components/app/BrandMark";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { demoCredentials } from "@/lib/demo-user";
 
 export const metadata: Metadata = { title: "Нэвтрэх" };
 
@@ -13,7 +14,12 @@ const highlights = [
   { icon: ShieldCheck, text: "Монгол хуулийн зөрчлийг тайлагнана" },
 ];
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ demo?: string }>;
+}) {
+  const demoFailed = (await searchParams).demo === "failed";
   return (
     /* One centered card on the phone; from lg up the empty space becomes a
        brand panel instead of margin. */
@@ -64,6 +70,27 @@ export default function LoginPage() {
         >
           <AuthForm />
         </Suspense>
+
+        {demoFailed && (
+          <p className="mt-4 w-full max-w-sm rounded-lg bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
+            Демо бүртгэлээр нэвтэрч чадсангүй. Доорх маягтаар нэвтэрнэ үү.
+          </p>
+        )}
+
+        {demoCredentials() && (
+          <div className="mt-4 w-full max-w-sm text-center">
+            <a
+              href="/demo"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-navy/20 bg-white text-sm font-semibold text-navy transition-colors hover:bg-navy/5"
+            >
+              <Eye className="size-4" />
+              Демо бүртгэлээр үзэх
+            </a>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Бүртгүүлэхгүйгээр жишээ гэрээ, аудитын дүнг харна.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

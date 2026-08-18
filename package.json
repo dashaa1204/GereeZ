@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "seed:demo": "node ./node_modules/tsx/dist/cli.mjs --env-file=.env.local scripts/seed-demo.ts",
     "ingest:legal": "node --max-old-space-size=4096 ./node_modules/tsx/dist/cli.mjs --env-file=.env.local scripts/ingest-legal.ts"
   },
   "dependencies": {
