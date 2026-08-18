@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { demoCredentials, safeDemoRedirect } from "@/lib/demo-user";
+import {
+  DEMO_ATTEMPT_PARAM,
+  demoCredentials,
+  safeDemoRedirect,
+} from "@/lib/demo-user";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
@@ -31,5 +35,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
+  // Marks "the sign-in already happened here" so a cookie-less client bounces
+  // to /login instead of being sent back for another attempt.
+  target.searchParams.set(DEMO_ATTEMPT_PARAM, "1");
   return NextResponse.redirect(target);
 }

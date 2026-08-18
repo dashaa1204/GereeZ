@@ -30,6 +30,15 @@ export function isDemoAutoLoginEnabled(): boolean {
 }
 
 /**
+ * Marker `/demo` puts on its post-sign-in redirect. A client that keeps cookies
+ * arrives signed in and it is just a stray query param; a client that does NOT
+ * keep them (link checkers, crawlers, previews) arrives anonymous, and the
+ * marker is what tells the proxy to send it to /login rather than back to
+ * /demo — otherwise the two bounce off each other forever.
+ */
+export const DEMO_ATTEMPT_PARAM = "demo";
+
+/**
  * Where `/demo?next=…` may send the visitor after signing them in: in-app paths
  * only, never an absolute URL an attacker could plant, and never back into the
  * demo/login routes (which would loop).

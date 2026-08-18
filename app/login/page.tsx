@@ -73,7 +73,7 @@ export default async function LoginPage({
 
         {demoFailed && (
           <p className="mt-4 w-full max-w-sm rounded-lg bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-            Демо бүртгэлээр нэвтэрч чадсангүй. Доорх маягтаар нэвтэрнэ үү.
+            Демо бүртгэлээр нэвтэрч чадсангүй — хөтчийн күүки идэвхгүй байж болзошгүй. Доорх маягтаар нэвтэрнэ үү.
           </p>
         )}
 
