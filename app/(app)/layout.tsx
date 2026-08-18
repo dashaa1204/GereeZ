@@ -8,5 +8,9 @@ export default async function AppLayout({
 }) {
   const data = await loadAppData();
   const unreadCount = data.alerts.filter((a) => !a.read).length;
-  return <AppShell unreadCount={unreadCount}>{children}</AppShell>;
+  return (
+    <AppShell unreadCount={unreadCount} credits={data.credits}>
+      {children}
+    </AppShell>
+  );
 }

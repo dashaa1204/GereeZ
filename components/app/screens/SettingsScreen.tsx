@@ -98,7 +98,9 @@ export function SettingsScreen({
   ];
 
   return (
-    <div className="space-y-5">
+    /* settings rows stay one readable column — they just stop stretching
+       across the full desktop width */
+    <div className="space-y-5 lg:max-w-2xl">
       {/* profile */}
       <div className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold shrink-0 uppercase">

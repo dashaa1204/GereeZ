@@ -62,7 +62,7 @@ export function AlertsScreen({ initialAlerts }: { initialAlerts: AlertVM[] }) {
         </div>
       )}
 
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3 lg:space-y-0 lg:items-start">
         {alerts.map((a) => {
           const cfg = severityConfig(a.severity);
           return (

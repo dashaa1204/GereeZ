@@ -45,8 +45,8 @@ export default async function LegalPage({ params }: PageProps) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-zinc-50">
-      <header className="sticky top-0 z-10 border-b border-border bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-md items-center gap-3">
+      <header className="sticky top-0 z-10 border-b border-border bg-white px-4 py-3 lg:px-8 lg:py-4">
+        <div className="mx-auto flex max-w-md items-center gap-3 lg:max-w-3xl">
           <Link
             href="/"
             className="flex size-8 items-center justify-center rounded-lg text-navy hover:bg-muted"
@@ -58,7 +58,7 @@ export default async function LegalPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-md flex-1 px-4 py-6">
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-6 lg:max-w-3xl lg:px-8 lg:py-10">
         <LegalContentBody content={content.content} />
         {updatedAt.getTime() > 0 && (
           <p className="mt-8 text-[11px] text-muted-foreground">

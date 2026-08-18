@@ -33,7 +33,8 @@ export function PaymentScreen({ credits }: { credits: number }) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 lg:grid lg:max-w-4xl lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
+      <div className="space-y-5">
       {/* balance card */}
       <div className="rounded-2xl bg-primary text-primary-foreground px-5 py-6">
         <p className="text-sm opacity-70 mb-1">Одоогийн үлдэгдэл</p>
@@ -60,7 +61,9 @@ export function PaymentScreen({ credits }: { credits: number }) {
           </div>
         ))}
       </div>
+      </div>
 
+      <div className="space-y-5">
       {/* packs */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">Кредит авах</h3>
@@ -131,6 +134,7 @@ export function PaymentScreen({ credits }: { credits: number }) {
             ? `${selected} кредит худалдан авах`
             : "Багцаа сонгоно уу"}
       </button>
+      </div>
     </div>
   );
 }

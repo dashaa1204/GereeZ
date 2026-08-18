@@ -27,7 +27,10 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
   const medCount = findings.filter((f) => f.severity === "medium").length;
 
   return (
-    <div className="space-y-5">
+    /* From lg up the verdict and the correction letter stay pinned in a left
+       column while the findings/strengths/meta tabs scroll beside them. */
+    <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-6 lg:space-y-0 lg:items-start">
+      <div className="space-y-5 lg:sticky lg:top-24">
       {/* score header */}
       <div className="bg-card border border-border rounded-2xl p-5">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
@@ -80,9 +83,11 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
           initialProposal={contract.proposal}
         />
       )}
+      </div>
 
+      <div className="space-y-5">
       {/* tabs */}
-      <div className="flex gap-1 bg-muted rounded-xl p-1">
+      <div className="flex gap-1 bg-muted rounded-xl p-1 lg:max-w-md">
         {(["findings", "strengths", "meta"] as const).map((t) => (
           <button
             key={t}
@@ -116,7 +121,8 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
             Таны эрхийг хамгаалсан зүйлүүд:
           </p>
           {strengths.length > 0 ? (
-            strengths.map((s, i) => (
+            <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 lg:items-start">
+            {strengths.map((s, i) => (
               <div
                 key={i}
                 className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-4 flex gap-3"
@@ -124,7 +130,8 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
                 <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
                 <p className="text-sm text-foreground leading-relaxed">{s}</p>
               </div>
-            ))
+            ))}
+            </div>
           ) : (
             <p className="rounded-xl border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
               Тэмдэглэхүйц давуу тал олдсонгүй.
@@ -155,6 +162,7 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

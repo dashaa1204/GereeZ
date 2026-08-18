@@ -15,7 +15,7 @@ export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
   const pathname = usePathname();
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] bg-card/95 backdrop-blur-md border-t border-border z-30">
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] md:max-w-[600px] bg-card/95 backdrop-blur-md border-t border-border z-30 lg:hidden">
       <div className="flex">
         {tabItems.map((t) => {
           // Active only on the exact tab route — audit (/contracts/[id]) and

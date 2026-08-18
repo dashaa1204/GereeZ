@@ -93,7 +93,7 @@ export default function LegalSettingsPage() {
   return (
     <div className="min-h-screen bg-zinc-50 pb-8">
       <header className="sticky top-0 z-10 border-b border-border bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-md items-center gap-3">
+        <div className="mx-auto flex max-w-md items-center gap-3 lg:max-w-3xl">
           <Link
             href="/"
             className="flex size-8 items-center justify-center rounded-lg text-navy hover:bg-muted"
@@ -110,7 +110,7 @@ export default function LegalSettingsPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-md space-y-4 px-4 py-5">
+      <main className="mx-auto max-w-md space-y-4 px-4 py-5 lg:max-w-3xl lg:px-8 lg:py-8">
         <section className="rounded-lg border border-border bg-white p-4">
           <label className="text-xs font-medium text-foreground">
             Админ нууц (LEGAL_INGEST_SECRET)

@@ -76,8 +76,8 @@ export function ContractsScreen({
 
   return (
     <div className="space-y-4">
-      {/* credit balance */}
-      <div className="flex items-center justify-between bg-card border border-border rounded-xl px-4 py-3">
+      {/* credit balance — the sidebar already shows it from lg up */}
+      <div className="flex items-center justify-between bg-card border border-border rounded-xl px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
             <CreditCard className="size-4 text-primary" />
@@ -110,6 +110,8 @@ export function ContractsScreen({
         </div>
       )}
 
+      {/* one column on the phone, a card grid once there is room for it */}
+      <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0 lg:items-start">
       {contracts.map((c) => {
         const cfg = statusCfg(c.status);
         if (!c.paid) {
@@ -201,6 +203,7 @@ export function ContractsScreen({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
