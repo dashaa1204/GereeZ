@@ -9,7 +9,13 @@ export default async function AppLayout({
   const data = await loadAppData();
   const unreadCount = data.alerts.filter((a) => !a.read).length;
   return (
-    <AppShell unreadCount={unreadCount} credits={data.credits}>
+    <AppShell
+      unreadCount={unreadCount}
+      alerts={data.alerts}
+      credits={data.credits}
+      userName={data.userName}
+      userEmail={data.userEmail}
+    >
       {children}
     </AppShell>
   );

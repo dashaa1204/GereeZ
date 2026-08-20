@@ -7,7 +7,7 @@ import { useTheme } from "./theme";
 
 /** Title + back-button visibility for the current route (sub-screens —
  *  audit/payment — show a back chevron). `desktop` overrides the title from
- *  `lg` up, where the sidebar already carries the brand. */
+ *  `lg` up, where the header already carries the brand. */
 function chromeFor(pathname: string): { title: string; desktop?: string; back: boolean } {
   if (pathname === "/contracts") return { title: "Гэрээнүүд", back: false };
   if (/^\/contracts\/.+/.test(pathname)) return { title: "Аудит дүн", back: true };
@@ -17,6 +17,11 @@ function chromeFor(pathname: string): { title: string; desktop?: string; back: b
   return { title: "GereeZ", desktop: "Нүүр", back: false };
 }
 
+/**
+ * The phone's status bar below `lg`. From `lg` up TopNav is the sticky bar, so
+ * this stops sticking and drops its divider — what is left is the plain page
+ * heading for the current route.
+ */
 export function StatusBar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -24,8 +29,8 @@ export function StatusBar() {
   const { title, desktop, back } = chromeFor(pathname);
 
   return (
-    <div className="bg-background/95 backdrop-blur-md sticky top-0 z-30">
-      <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between px-5 pt-4 pb-3 border-b border-border lg:px-10 lg:py-5">
+    <div className="bg-background/95 backdrop-blur-md sticky top-0 z-30 lg:static lg:z-auto lg:bg-transparent lg:backdrop-blur-none">
+      <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between px-5 pt-4 pb-3 border-b border-border lg:border-0 lg:px-10 lg:pt-8 lg:pb-0">
         <div className="flex items-center gap-2">
           {back ? (
             <button
@@ -36,9 +41,9 @@ export function StatusBar() {
             </button>
           ) : null}
           <div className="flex items-center gap-2">
-            {/* the sidebar carries the brand from lg up */}
+            {/* the header carries the brand from lg up */}
             <BrandMark className="w-7 h-7 text-foreground lg:hidden" />
-            <h1 className="text-base font-bold text-foreground lg:text-2xl lg:tracking-tight">
+            <h1 className="text-base font-bold tracking-tight text-foreground lg:text-2xl">
               <span className={desktop ? "lg:hidden" : undefined}>{title}</span>
               {desktop && <span className="hidden lg:inline">{desktop}</span>}
             </h1>
