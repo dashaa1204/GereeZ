@@ -6,9 +6,27 @@ export function isDemoUiEnabled(): boolean {
   return process.env.NEXT_PUBLIC_DEMO_UI === "true";
 }
 
-/** Static analyzed contract for UI development — no upload or AI required. */
+function isoDate(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * Analyzed contract for UI development — no upload or AI required.
+ *
+ * Its dates are relative to today rather than fixed, so the deadline-driven
+ * notifications (expiry countdown, notice deadline, payment day) actually fire
+ * while working on them: a contract ending in a little over two weeks, whose
+ * 14-day notice window closes in two days, with a payment day just ahead.
+ */
 export function getDemoContract(): Contract {
-  const now = "2025-03-15T10:30:00.000Z";
+  const now = new Date().toISOString();
+  const startDate = isoDate(-300);
+  const endDate = isoDate(16);
+  const paymentDay = ((new Date().getDate() + 1) % 28) + 1;
 
   return {
     id: DEMO_CONTRACT_ID,
@@ -18,8 +36,8 @@ export function getDemoContract(): Contract {
     storage_path: "",
     compliance_score: 72,
     status: "completed",
-    start_date: "2024-09-01",
-    end_date: "2025-09-01",
+    start_date: startDate,
+    end_date: endDate,
     page_count: 6,
     created_at: now,
     updated_at: now,
@@ -32,9 +50,10 @@ export function getDemoContract(): Contract {
         landlordName: "Дорж",
         monthlyRent: 1500000,
         deposit: 3000000,
-        startDate: "2024-09-01",
-        endDate: "2025-09-01",
-        paymentDay: 5,
+        startDate,
+        endDate,
+        paymentDay,
+        noticePeriodDays: 14,
       },
       strengths: [
         "Түрээслүүлэгч, түрээслэгчийн талууд тодорхойлогдсон",

@@ -33,6 +33,7 @@ function makeResult(overrides: Partial<AuditResultSchema> = {}): AuditResultSche
       startDate: null,
       endDate: null,
       paymentDay: null,
+      noticePeriodDays: null,
       contractTitle: null,
       tenantLabel: null,
       landlordLabel: null,
@@ -112,6 +113,7 @@ describe("normalizeAuditResult — metadata", () => {
           startDate: "2026-01-15",
           endDate: "2026-12-31",
           paymentDay: 5,
+          noticePeriodDays: 30,
           contractTitle: "Түрээсийн гэрээ",
           tenantLabel: "Түрээслэгч",
           landlordLabel: "Түрээслүүлэгч",
@@ -127,6 +129,7 @@ describe("normalizeAuditResult — metadata", () => {
       startDate: "2026-01-15",
       endDate: "2026-12-31",
       paymentDay: 5,
+      noticePeriodDays: 30,
       contractTitle: "Түрээсийн гэрээ",
       tenantLabel: "Түрээслэгч",
       landlordLabel: "Түрээслүүлэгч",
@@ -145,6 +148,7 @@ describe("normalizeAuditResult — metadata", () => {
           startDate: "2026-02-31",
           endDate: "31.12.2026",
           paymentDay: null,
+          noticePeriodDays: null,
           contractTitle: null,
           tenantLabel: null,
           landlordLabel: null,
@@ -167,6 +171,7 @@ describe("normalizeAuditResult — metadata", () => {
           startDate: null,
           endDate: null,
           paymentDay: 32,
+          noticePeriodDays: null,
           contractTitle: null,
           tenantLabel: null,
           landlordLabel: null,
@@ -177,5 +182,31 @@ describe("normalizeAuditResult — metadata", () => {
     expect(result.metadata?.monthlyRent).toBeNull();
     expect(result.metadata?.deposit).toBeNull();
     expect(result.metadata?.paymentDay).toBeNull();
+  });
+
+  it("nulls a notice period long enough to be a misread term length", () => {
+    const withNotice = (noticePeriodDays: number | null) =>
+      normalizeAuditResult(
+        makeResult({
+          metadata: {
+            tenantName: null,
+            landlordName: null,
+            monthlyRent: null,
+            deposit: null,
+            startDate: null,
+            endDate: null,
+            paymentDay: null,
+            noticePeriodDays,
+            contractTitle: null,
+            tenantLabel: null,
+            landlordLabel: null,
+            paymentLabel: null,
+          },
+        }),
+      ).metadata?.noticePeriodDays;
+
+    expect(withNotice(30)).toBe(30);
+    expect(withNotice(365)).toBeNull(); // a one-year term, not a notice period
+    expect(withNotice(0)).toBeNull();
   });
 });

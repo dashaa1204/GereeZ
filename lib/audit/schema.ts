@@ -47,6 +47,13 @@ export const contractMetadataSchema = z.object({
     .describe(
       "Сар бүр төлбөр төлөх эсвэл цалин олгох өдөр (1-31). Байхгүй бол null.",
     ),
+  noticePeriodDays: z
+    .number()
+    .int()
+    .nullable()
+    .describe(
+      "Гэрээг цуцлах, эсхүл сунгахгүй тохиолдолд хэдэн хоногийн өмнө нөгөө талдаа мэдэгдэх ёстойг заасан хоногийн тоо (жишээ нь «30 хоногийн өмнө мэдэгдэнэ» → 30). Заагаагүй бол null.",
+    ),
   contractTitle: z
     .string()
     .nullable()
@@ -83,6 +90,7 @@ export function emptyContractMetadata(): z.infer<typeof contractMetadataSchema> 
     startDate: null,
     endDate: null,
     paymentDay: null,
+    noticePeriodDays: null,
     contractTitle: null,
     tenantLabel: null,
     landlordLabel: null,

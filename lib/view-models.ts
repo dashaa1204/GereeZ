@@ -1,18 +1,22 @@
 import { cache } from "react";
 import { getReadAlertIds } from "./alerts";
 import { resolveContractLabels } from "./contract-labels";
-import { getDashboardData, type DashboardAlert } from "./contracts";
+import { getDashboardData } from "./contracts";
+import { getLawLastUpdated } from "./legal-articles";
+import { buildAlerts, type AlertVM } from "./notifications";
 import { getAuthenticatedUser } from "./supabase-server";
 import { getBalance } from "./credits";
 import {
   expiryLabel,
-  formatDateMn,
   getEndDate,
   getMetadata,
   getStartDate,
   getTrackStatus,
 } from "./tracking";
-import type { AlertSeverity, AuditAlert, Contract } from "./types/contract";
+import type { AuditAlert, Contract } from "./types/contract";
+
+export type { AlertKind, AlertVM } from "./notifications";
+export { ALERT_KIND_LABELS, buildAlerts } from "./notifications";
 
 /** One audit finding in the shape the screens render. */
 export interface AuditFinding {
@@ -61,21 +65,6 @@ export interface ContractVM {
   expiry: string | null;
   /** Previously generated correction letter, or null if none saved yet. */
   proposal: string | null;
-}
-
-/** A notification mapped to what the alerts screen renders. */
-export interface AlertVM {
-  /** Stable id used as the React key and for marking-as-read. */
-  id: string;
-  type: "compliance" | "expiry";
-  severity: AlertSeverity;
-  /** Contract this alert belongs to (file name — real contracts have no address). */
-  contractName: string;
-  title: string;
-  body: string;
-  /** ISO `YYYY-MM-DD`; formatted for display in the UI. Empty when unknown. */
-  date: string;
-  read: boolean;
 }
 
 /**
@@ -148,91 +137,10 @@ export function mapContract(c: Contract): ContractVM {
   };
 }
 
-const SEVERITY_RANK: Record<AlertSeverity, number> = {
-  high: 0,
-  medium: 1,
-  low: 2,
-  info: 3,
-};
-
-/**
- * Build the alerts feed from two real sources: per-clause compliance alerts
- * (already severity-sorted by `getDashboardData`) and expiry alerts derived
- * from each contract's tracking status. Read-state comes from the
- * `alert_reads` table (see lib/alerts.ts), keyed by the ids built here — so
- * the ids must stay stable across requests for a given audit result.
- */
-export function buildAlerts(
-  contracts: Contract[],
-  dashboardAlerts: DashboardAlert[],
-  readIds: ReadonlySet<string> = new Set(),
-): AlertVM[] {
-  // Compliance alerts carry no per-alert timestamp; use the contract's last
-  // update (when the audit completed) as the alert date.
-  const dateById = new Map(
-    contracts.map((c) => [c.id, c.updated_at?.slice(0, 10) ?? ""]),
-  );
-
-  // Number alerts within their own contract, not across the whole feed:
-  // another contract's audit must not shift these ids (that would corrupt
-  // persisted read marks). Re-auditing a contract may reorder its own alerts —
-  // acceptable, new findings deserve to show as unread.
-  const perContractSeq = new Map<string, number>();
-  const compliance: AlertVM[] = dashboardAlerts.map((a) => {
-    const seq = perContractSeq.get(a.contractId) ?? 0;
-    perContractSeq.set(a.contractId, seq + 1);
-    const id = `c-${a.contractId}-${seq}`;
-    return {
-      id,
-      type: "compliance",
-      severity: a.severity,
-      contractName: a.contractName,
-      title: a.title,
-      body: a.description,
-      date: dateById.get(a.contractId) ?? "",
-      read: readIds.has(id),
-    };
-  });
-
-  const expiry: AlertVM[] = [];
-  for (const c of contracts) {
-    const status = getTrackStatus(c);
-    if (status !== "expiring-soon" && status !== "expired") continue;
-    const end = getEndDate(c);
-    const endLabel = formatDateMn(end) ?? end ?? "—";
-    const expired = status === "expired";
-    // The status is part of the id so the escalation from "expiring soon" to
-    // "expired" surfaces as a fresh unread alert.
-    const id = `e-${c.id}-${status}`;
-    expiry.push({
-      id,
-      type: "expiry",
-      severity: expired ? "high" : "medium",
-      contractName: c.file_name,
-      title: expired ? "Гэрээний хугацаа дууссан" : "Гэрээ удахгүй дуусна",
-      body: expired
-        ? `Гэрээ ${endLabel}-нд дууссан. Сунгах эсвэл шинэчлэх шаардлагатай эсэхээ шалгана уу.`
-        : `Гэрээ ${endLabel}-нд дуусна. Сунгах эсэхээ эзэмшигчтэй урьдчилан ярилцана уу.`,
-      date: end ?? "",
-      read: readIds.has(id),
-    });
-  }
-
-  return [...compliance, ...expiry].sort((a, b) => {
-    const rank = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
-    if (rank !== 0) return rank;
-    return b.date.localeCompare(a.date);
-  });
-}
-
 // Cached per request so the (app) layout (badge count) and the page within it
 // share a single fetch.
 export const loadAppData = cache(async (): Promise<AppData> => {
-  const {
-    contracts: rawContracts,
-    metrics,
-    alerts: dashboardAlerts,
-  } = await getDashboardData();
+  const { contracts: rawContracts, metrics } = await getDashboardData();
   const expiringSoon = rawContracts.filter(
     (c) => getTrackStatus(c) === "expiring-soon",
   ).length;
@@ -244,9 +152,11 @@ export const loadAppData = cache(async (): Promise<AppData> => {
   let userName: string | null = null;
   let userEmail: string | null = null;
   let readIds: Set<string> = new Set();
+  let signedIn = false;
   try {
     const user = await getAuthenticatedUser();
     if (user) {
+      signedIn = true;
       userEmail = user.email ?? null;
       // Prefer the profile name the user set; fall back to the email prefix.
       const fullName = user.user_metadata?.full_name;
@@ -263,6 +173,10 @@ export const loadAppData = cache(async (): Promise<AppData> => {
     credits = 0;
   }
 
+  // Law-update alerts compare each audit against the last ingest of the law it
+  // cited. Fails soft to an empty map, which simply produces no such alerts.
+  const lawUpdatedAt = await getLawLastUpdated();
+
   return {
     userName,
     userEmail,
@@ -272,6 +186,11 @@ export const loadAppData = cache(async (): Promise<AppData> => {
     expiringSoon,
     highRiskCount: metrics.highRiskCount,
     contracts: rawContracts.map(mapContract),
-    alerts: buildAlerts(rawContracts, dashboardAlerts, readIds),
+    alerts: buildAlerts(rawContracts, {
+      readIds,
+      credits,
+      lawUpdatedAt,
+      signedIn,
+    }),
   };
 });

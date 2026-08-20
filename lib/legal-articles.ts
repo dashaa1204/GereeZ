@@ -61,3 +61,46 @@ export async function getLegalArticle(
       .trim(),
   };
 }
+
+/**
+ * When each law in the knowledge base was last ingested, keyed by law name.
+ *
+ * `ingestLegalText` replaces a law's rows wholesale, so the newest `created_at`
+ * under a law name is that law's current version stamp. The notification feed
+ * compares it against each audit's timestamp to flag contracts that were
+ * measured against superseded text (see lib/notifications.ts).
+ *
+ * Fails soft to an empty map — a missing `law_last_updated` RPC (migration 013
+ * not run yet) must not take the app down, it just means no such alerts.
+ */
+let lawVersionsUnavailable = false;
+
+export async function getLawLastUpdated(): Promise<Map<string, string>> {
+  // Every app page load asks for this. Once we know the RPC isn't there, stop
+  // asking (and stop logging) rather than repeating the same miss per request.
+  if (lawVersionsUnavailable) return new Map();
+
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.rpc("law_last_updated");
+    if (error) {
+      // PGRST202: the function doesn't exist — migration 013 hasn't been run.
+      if (error.code === "PGRST202") {
+        lawVersionsUnavailable = true;
+        console.warn(
+          "law_last_updated RPC missing (run migration 013) — law-update alerts are off.",
+        );
+      } else {
+        console.error("getLawLastUpdated failed:", error.message);
+      }
+      return new Map();
+    }
+    const rows = (data ?? []) as { law_name: string; last_updated: string }[];
+    return new Map(rows.map((row) => [row.law_name, row.last_updated]));
+  } catch (err) {
+    // Missing service-role env: same fail-soft as a query error.
+    lawVersionsUnavailable = true;
+    console.error("getLawLastUpdated failed:", err);
+    return new Map();
+  }
+}

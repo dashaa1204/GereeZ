@@ -50,6 +50,12 @@ export interface ContractMetadata {
   /** Day of month rent is due (1–31). */
   paymentDay: number | null;
   /**
+   * How many days' notice the contract requires before termination or
+   * non-renewal, when it states one. Drives the "notice deadline" reminder.
+   * Optional: audits stored before this field shipped lack it.
+   */
+  noticePeriodDays?: number | null;
+  /**
    * Display labels extracted from the contract's own wording, so the UI can
    * name parties/amounts correctly for any civil-code contract (rental, sale,
    * cooperation, …), not just the two detected types. Optional: audits stored

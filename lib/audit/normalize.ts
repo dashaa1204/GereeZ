@@ -203,6 +203,16 @@ function normalizeMetadata(
       ? metadata.paymentDay
       : null;
 
+  // A notice period is a handful of days to a few months; anything larger is
+  // the model misreading a term length as a notice requirement.
+  const noticePeriodDays =
+    metadata.noticePeriodDays != null &&
+    Number.isInteger(metadata.noticePeriodDays) &&
+    metadata.noticePeriodDays >= 1 &&
+    metadata.noticePeriodDays <= 180
+      ? metadata.noticePeriodDays
+      : null;
+
   return {
     tenantName: metadata.tenantName?.trim() || null,
     landlordName: metadata.landlordName?.trim() || null,
@@ -211,6 +221,7 @@ function normalizeMetadata(
     startDate: normalizeDate(metadata.startDate),
     endDate: normalizeDate(metadata.endDate),
     paymentDay,
+    noticePeriodDays,
     contractTitle: normalizeLabel(metadata.contractTitle),
     tenantLabel: normalizeLabel(metadata.tenantLabel),
     landlordLabel: normalizeLabel(metadata.landlordLabel),

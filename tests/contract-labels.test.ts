@@ -15,6 +15,7 @@ function meta(
     startDate: null,
     endDate: null,
     paymentDay: null,
+    noticePeriodDays: null,
     contractTitle: null,
     tenantLabel: null,
     landlordLabel: null,

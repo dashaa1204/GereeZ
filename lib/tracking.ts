@@ -42,6 +42,74 @@ function startOfToday(): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 }
 
+/** Local calendar date as `YYYY-MM-DD` (never UTC — see formatDateMn). */
+function toIsoDate(d: Date): string {
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+/** Today as `YYYY-MM-DD`. */
+export function todayIso(): string {
+  return toIsoDate(new Date());
+}
+
+/** `date` moved by `delta` days, still `YYYY-MM-DD`. Null on invalid input. */
+export function shiftDays(date: string | null, delta: number): string | null {
+  if (!date) return null;
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setDate(parsed.getDate() + delta);
+  return toIsoDate(parsed);
+}
+
+/** Whole hours since an ISO timestamp. Null when missing/invalid. */
+export function hoursSince(timestamp: string | null | undefined): number | null {
+  if (!timestamp) return null;
+  const parsed = Date.parse(timestamp);
+  if (Number.isNaN(parsed)) return null;
+  return (Date.now() - parsed) / (60 * 60 * 1000);
+}
+
+/**
+ * The next time a monthly payment day comes around, counting today. A day past
+ * the end of a short month clamps to that month's last day, so a 31st payment
+ * day lands on 28 February rather than skipping the month. Null when the day
+ * isn't a real 1–31.
+ */
+export function nextPaymentDate(
+  paymentDay: number | null | undefined,
+): string | null {
+  if (
+    paymentDay == null ||
+    !Number.isInteger(paymentDay) ||
+    paymentDay < 1 ||
+    paymentDay > 31
+  ) {
+    return null;
+  }
+  const today = new Date(startOfToday());
+  // This month's occurrence, then next month's if today is already past it.
+  for (const offset of [0, 1]) {
+    const year = today.getFullYear();
+    const month = today.getMonth() + offset;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const due = new Date(year, month, Math.min(paymentDay, lastDay));
+    if (due.getTime() >= today.getTime()) return toIsoDate(due);
+  }
+  return null;
+}
+
+/**
+ * The last day the user can still give notice: the end date minus the notice
+ * period the contract states. Null when either is unknown.
+ */
+export function noticeDeadline(contract: Contract): string | null {
+  const days = getMetadata(contract)?.noticePeriodDays;
+  if (days == null || days <= 0) return null;
+  return shiftDays(getEndDate(contract), -days);
+}
+
 /** Whole days from today until `date` (negative if past). Null if missing/invalid. */
 export function daysUntil(date: string | null): number | null {
   if (!date) return null;

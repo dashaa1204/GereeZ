@@ -68,6 +68,7 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
       startDate: "2024-09-01",
       endDate: "2025-09-01",
       paymentDay: 5,
+      noticePeriodDays: 30,
       contractTitle: "Түрээсийн гэрээ",
       tenantLabel: "Түрээслэгч",
       landlordLabel: "Түрээслүүлэгч",

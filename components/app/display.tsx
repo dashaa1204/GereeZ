@@ -13,9 +13,6 @@ export function fmt(n: number) {
   return n.toLocaleString("mn-MN") + "₮";
 }
 
-export function fmtOrDash(n: number | null) {
-  return n == null ? "—" : fmt(n);
-}
 
 export function severityConfig(s: Severity) {
   switch (s) {
