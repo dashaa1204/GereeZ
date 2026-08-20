@@ -24,7 +24,7 @@ export default async function LoginPage({
     /* One centered card on the phone; from lg up the empty space becomes a
        brand panel instead of margin. */
     <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-4 py-10 lg:flex-row lg:items-stretch lg:p-0">
-      <div className="hidden lg:flex lg:w-1/2 lg:flex-col lg:justify-between bg-zinc-900 p-12 text-white xl:p-16">
+      <div className="bg-panel hidden p-12 text-white lg:flex lg:w-1/2 lg:flex-col lg:justify-between xl:p-16">
         <div className="flex items-center gap-2.5">
           <BrandMark className="size-9 text-white" />
           <span className="text-2xl font-semibold">GereeZ</span>
@@ -41,8 +41,8 @@ export default async function LoginPage({
           <ul className="mt-8 space-y-3.5">
             {highlights.map((h) => (
               <li key={h.text} className="flex items-center gap-3 text-sm text-white/85">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                  <h.icon className="size-4" />
+                <span className="bg-brand/20 flex size-8 shrink-0 items-center justify-center rounded-xl">
+                  <h.icon className="text-brand-bright size-4" />
                 </span>
                 {h.text}
               </li>
@@ -57,8 +57,8 @@ export default async function LoginPage({
 
       <div className="flex w-full flex-col items-center justify-center lg:w-1/2 lg:px-8 lg:py-12">
         <div className="mb-8 flex items-center gap-2 lg:hidden">
-          <BrandMark className="size-9 text-navy" />
-          <span className="text-2xl font-semibold text-navy">GereeZ</span>
+          <BrandMark className="size-9 text-foreground" />
+          <span className="text-2xl font-semibold text-foreground">GereeZ</span>
         </div>
 
         <Suspense
@@ -81,7 +81,7 @@ export default async function LoginPage({
           <div className="mt-4 w-full max-w-sm text-center">
             <a
               href="/demo"
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-navy/20 bg-white text-sm font-semibold text-navy transition-colors hover:bg-navy/5"
+              className="border-brand/25 text-brand hover:bg-brand/5 flex h-11 w-full items-center justify-center gap-2 rounded-xl border bg-card text-sm font-semibold transition-colors"
             >
               <Eye className="size-4" />
               Демо бүртгэлээр үзэх

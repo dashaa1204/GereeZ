@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, FileText, Home, Settings } from "lucide-react";
+import { DASHBOARD_PATH } from "@/lib/routes";
 
 const tabItems = [
-  { href: "/", icon: Home, label: "Нүүр" },
+  { href: DASHBOARD_PATH, icon: Home, label: "Нүүр" },
   { href: "/contracts", icon: FileText, label: "Гэрээ" },
   { href: "/alerts", icon: Bell, label: "Мэдэгдэл" },
   { href: "/settings", icon: Settings, label: "Тохиргоо" },
@@ -29,10 +30,10 @@ export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
               href={t.href}
               className="flex-1 flex flex-col items-center gap-1 py-3 transition-colors relative"
             >
-              <span className={`transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
+              <span className={`transition-colors ${active ? "text-brand" : "text-muted-foreground"}`}>
                 <Icon className="w-5 h-5" />
               </span>
-              <span className={`text-xs font-medium transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
+              <span className={`text-xs transition-colors ${active ? "text-brand font-semibold" : "text-muted-foreground font-medium"}`}>
                 {t.label}
               </span>
               {badge > 0 && (
@@ -41,7 +42,7 @@ export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
                 </span>
               )}
               {active && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand" />
               )}
             </Link>
           );

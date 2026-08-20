@@ -20,7 +20,7 @@ export function LegalFooter() {
             <Link
               key={link.slug}
               href={`/legal/${link.slug}`}
-              className="text-[11px] font-medium text-navy underline-offset-2 hover:underline"
+              className="text-[11px] font-medium text-brand underline-offset-2 hover:underline"
             >
               {link.label}
             </Link>

@@ -28,7 +28,8 @@ export async function generateMetadata({ params }: PageProps) {
 
   const content = await getSiteContent(slug as SiteContentSlug);
   return {
-    title: `${content.title} | GereeZ`,
+    // The root layout's template already appends "— GereeZ".
+    title: content.title,
     description: content.title,
   };
 }
@@ -49,12 +50,12 @@ export default async function LegalPage({ params }: PageProps) {
         <div className="mx-auto flex max-w-md items-center gap-3 lg:max-w-3xl">
           <Link
             href="/"
-            className="flex size-8 items-center justify-center rounded-lg text-navy hover:bg-muted"
+            className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted"
             aria-label="Буцах"
           >
             <ArrowLeft className="size-4" />
           </Link>
-          <h1 className="text-lg font-semibold text-navy">{content.title}</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">{content.title}</h1>
         </div>
       </header>
 

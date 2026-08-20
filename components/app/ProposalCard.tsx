@@ -69,7 +69,7 @@ export function ProposalCard({
 
   const header = (
     <>
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <div className="bg-brand/10 text-brand flex size-10 shrink-0 items-center justify-center rounded-xl">
         <PenLine className="w-5 h-5" />
       </div>
       <div className="flex-1 min-w-0 text-left">

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { DASHBOARD_PATH } from "@/lib/routes";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -66,7 +67,7 @@ export function ResetPasswordForm() {
         password,
       });
       if (updateError) throw updateError;
-      router.replace("/");
+      router.replace(DASHBOARD_PATH);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Алдаа гарлаа. Дахин оролдоно уу.");
@@ -78,7 +79,7 @@ export function ResetPasswordForm() {
   if (stage === "verifying") {
     return (
       <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-10 text-center shadow-sm">
-        <Loader2 className="mx-auto size-5 animate-spin text-navy" />
+        <Loader2 className="mx-auto size-5 animate-spin text-brand" />
         <p className="mt-3 text-sm text-muted-foreground">Холбоос шалгаж байна…</p>
       </div>
     );
@@ -87,7 +88,7 @@ export function ResetPasswordForm() {
   return (
     <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-6 shadow-sm">
       <div className="mb-6 text-center">
-        <h1 className="text-xl font-bold text-navy">Шинэ нууц үг</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Шинэ нууц үг</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Бүртгэлдээ ашиглах шинэ нууц үгээ оруулна уу.
         </p>
@@ -110,7 +111,7 @@ export function ResetPasswordForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              className="h-11 w-full rounded-lg border border-border bg-muted/20 py-0 pl-3 pr-10 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 disabled:opacity-50"
+              className="h-11 w-full rounded-lg border border-border bg-muted/20 py-0 pl-3 pr-10 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-50"
               placeholder="••••••••"
             />
             <button
@@ -142,7 +143,7 @@ export function ResetPasswordForm() {
         <Button
           type="submit"
           disabled={loading}
-          className="h-11 w-full gap-2 rounded-lg bg-navy text-white hover:bg-navy/90 active:scale-[0.98]"
+          className="h-11 w-full gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98]"
         >
           {loading && <Loader2 className="size-4 animate-spin" />}
           Нууц үг шинэчлэх

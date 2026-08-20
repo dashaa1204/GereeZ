@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 import { deleteContract } from "@/lib/services/contracts.client";
 import type { ContractVM } from "@/lib/view-models";
-import { fmtOrDash, scoreColor } from "../display";
+import { fmt, scoreColor } from "../display";
+import { Eyebrow, Panel, PanelGlow } from "../kit";
 
 export function ContractsScreen({
   contracts,
@@ -77,26 +78,29 @@ export function ContractsScreen({
   return (
     <div className="space-y-4">
       {/* credit balance — the sidebar already shows it from lg up */}
-      <div className="flex items-center justify-between bg-card border border-border rounded-xl px-4 py-3 lg:hidden">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-            <CreditCard className="size-4 text-primary" />
+      <Panel className="px-4 py-3.5 lg:hidden">
+        <PanelGlow className="-top-14 -right-8 size-36" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-white/10">
+              <CreditCard className="size-4 text-white" />
+            </span>
+            <div>
+              <p className="text-xs text-white/60">Кредит үлдэгдэл</p>
+              <p className="text-lg font-bold tracking-tight text-white">{credits}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Кредит үлдэгдэл</p>
-            <p className="text-lg font-bold text-foreground">{credits}</p>
-          </div>
+          <button
+            onClick={onPayment}
+            className="flex items-center gap-1.5 rounded-xl bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15"
+          >
+            <Plus className="w-4 h-4" />
+            Нэмэх
+          </button>
         </div>
-        <button
-          onClick={onPayment}
-          className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3.5 py-2 rounded-xl hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Нэмэх
-        </button>
-      </div>
+      </Panel>
 
-      <h2 className="text-sm font-semibold text-muted-foreground px-0.5">Бүх гэрээ ({contracts.length})</h2>
+      <Eyebrow className="px-0.5">Бүх гэрээ ({contracts.length})</Eyebrow>
 
       {deleteError && (
         <p className="text-sm text-red-600 dark:text-red-400 px-0.5">{deleteError}</p>
@@ -161,7 +165,7 @@ export function ContractsScreen({
         }
 
         return (
-          <div key={c.id} className="bg-card border border-border rounded-2xl p-4 space-y-3">
+          <div key={c.id} className="bg-card border border-border rounded-2xl p-5 space-y-3.5">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground leading-snug truncate">{c.label}</p>
@@ -189,16 +193,22 @@ export function ContractsScreen({
               </div>
               <span className="text-xs font-bold" style={{ color: scoreColor(c.score ?? 0) }}>{c.score ?? "—"}</span>
             </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{c.rentLabel}: <span className="font-semibold text-foreground">{fmtOrDash(c.rent)}</span></span>
-              <span>Барьцаа: <span className="font-semibold text-foreground">{fmtOrDash(c.deposit)}</span></span>
-            </div>
+            {(c.rent != null || c.deposit != null) && (
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                {c.rent != null && (
+                  <span>{c.rentLabel}: <span className="font-semibold text-foreground">{fmt(c.rent)}</span></span>
+                )}
+                {c.deposit != null && (
+                  <span>Барьцаа: <span className="font-semibold text-foreground">{fmt(c.deposit)}</span></span>
+                )}
+              </div>
+            )}
             <button
               onClick={() => router.push(`/contracts/${c.id}`)}
-              className="w-full text-sm font-semibold text-primary py-2 rounded-xl bg-primary/8 hover:bg-primary/12 transition-colors flex items-center justify-center gap-2"
+              className="bg-brand/10 text-brand hover:bg-brand/15 group flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-colors"
             >
               Аудит харах
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </button>
           </div>
         );

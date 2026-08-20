@@ -7,7 +7,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-navy: var(--navy);
+  --color-brand: var(--brand);
+  --color-brand-bright: var(--brand-bright);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-panel: var(--panel);
+  --color-panel-foreground: var(--panel-foreground);
   --color-success: var(--success);
   --color-success-complete: var(--success-complete);
   --color-warning: var(--warning);
@@ -55,7 +59,19 @@
 }
 
 :root {
-  --navy: oklch(0.28 0.04 260);
+  /* Brand accent. Emerald is the only non-severity color in the system: it
+     marks section labels, active navigation and supporting icons. Red/amber
+     stay reserved for risk, so the accent never competes with them. */
+  --brand: oklch(0.53 0.145 163);
+  --brand-foreground: oklch(0.985 0 0);
+  /* Accent for use ON the dark panel, where the light-mode --brand is too
+     dim to read. Intentionally identical in both themes: the panel is too. */
+  --brand-bright: oklch(0.75 0.15 163);
+  /* Emphasis surface — the near-black panel the landing page leads with. It is
+     deliberately dark in BOTH themes; the dark-mode value is lifted instead of
+     deepened so the panel still separates from the (darker) page behind it. */
+  --panel: oklch(0.16 0.008 260);
+  --panel-foreground: oklch(0.985 0 0);
   --success: oklch(0.62 0.19 145);
   --success-complete: oklch(0.65 0.17 155);
   --success-glow: oklch(0.65 0.17 155 / 0.25);
@@ -95,6 +111,9 @@
 }
 
 .dark {
+  --brand: oklch(0.75 0.15 163);
+  --brand-foreground: oklch(0.205 0 0);
+  --panel: oklch(0.28 0.008 260);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

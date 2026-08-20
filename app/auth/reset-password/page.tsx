@@ -10,8 +10,8 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-4 py-10">
       <div className="mb-8 flex items-center gap-2">
-        <BrandMark className="size-9 text-navy" />
-        <span className="text-2xl font-semibold text-navy">GereeZ</span>
+        <BrandMark className="size-9 text-foreground" />
+        <span className="text-2xl font-semibold text-foreground">GereeZ</span>
       </div>
 
       <Suspense

@@ -14,10 +14,11 @@ import {
   XCircle,
 } from "lucide-react";
 import type { ContractVM } from "@/lib/view-models";
-import { fmtOrDash, scoreLabel } from "../display";
+import { fmt, scoreLabel } from "../display";
 import { ScoreRing } from "../ScoreRing";
 import { FindingRow } from "../FindingRow";
 import { ProposalCard } from "../ProposalCard";
+import { Eyebrow } from "../kit";
 
 export function AuditScreen({ contract }: { contract: ContractVM }) {
   const [tab, setTab] = useState<"findings" | "strengths" | "meta">("findings");
@@ -25,6 +26,17 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
   const strengths = contract.strengths;
   const highCount = findings.filter((f) => f.severity === "high").length;
   const medCount = findings.filter((f) => f.severity === "medium").length;
+  // Fields the extractor could not find are dropped rather than rendered as a
+  // dash — an absent row reads as "not in the contract" just as clearly.
+  const metaRows = [
+    { icon: <User className="w-4 h-4" />, label: contract.tenantLabel, value: contract.tenant },
+    { icon: <Building2 className="w-4 h-4" />, label: contract.landlordLabel, value: contract.landlord },
+    { icon: <Banknote className="w-4 h-4" />, label: contract.rentLabel, value: contract.rent != null ? fmt(contract.rent) : null },
+    { icon: <CreditCard className="w-4 h-4" />, label: "Барьцаа", value: contract.deposit != null ? fmt(contract.deposit) : null },
+    { icon: <Calendar className="w-4 h-4" />, label: "Эхлэх огноо", value: contract.startDate },
+    { icon: <Calendar className="w-4 h-4" />, label: "Дуусах огноо", value: contract.endDate },
+    { icon: <Clock className="w-4 h-4" />, label: "Төлбөрийн өдөр", value: contract.payDay != null ? `Сарын ${contract.payDay}-нд` : null },
+  ].filter((row) => row.value != null && row.value !== "—");
 
   return (
     /* From lg up the verdict and the correction letter stay pinned in a left
@@ -33,9 +45,7 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
       <div className="space-y-5 lg:sticky lg:top-24">
       {/* score header */}
       <div className="bg-card border border-border rounded-2xl p-5">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-          Нийцлийн дүгнэлт
-        </p>
+        <Eyebrow className="mb-4">Нийцлийн дүгнэлт</Eyebrow>
         <div className="flex items-center gap-5">
           {contract.score != null ? (
             <ScoreRing score={contract.score} size={120} />
@@ -87,7 +97,7 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
 
       <div className="space-y-5">
       {/* tabs */}
-      <div className="flex gap-1 bg-muted rounded-xl p-1 lg:max-w-md">
+      <div className="flex gap-1 rounded-2xl bg-muted p-1 lg:max-w-md">
         {(["findings", "strengths", "meta"] as const).map((t) => (
           <button
             key={t}
@@ -108,7 +118,7 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
           {findings.length > 0 ? (
             findings.map((f) => <FindingRow key={f.id} f={f} />)
           ) : (
-            <p className="rounded-xl border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
+            <p className="rounded-2xl border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
               Анхааруулга илрээгүй.
             </p>
           )}
@@ -125,7 +135,7 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
             {strengths.map((s, i) => (
               <div
                 key={i}
-                className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-4 flex gap-3"
+                className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/30"
               >
                 <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
                 <p className="text-sm text-foreground leading-relaxed">{s}</p>
@@ -133,7 +143,7 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
             ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
+            <p className="rounded-2xl border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
               Тэмдэглэхүйц давуу тал олдсонгүй.
             </p>
           )}
@@ -141,26 +151,24 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
       )}
 
       {tab === "meta" && (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {[
-            { icon: <User className="w-4 h-4" />, label: contract.tenantLabel, value: contract.tenant },
-            { icon: <Building2 className="w-4 h-4" />, label: contract.landlordLabel, value: contract.landlord },
-            { icon: <Banknote className="w-4 h-4" />, label: contract.rentLabel, value: fmtOrDash(contract.rent) },
-            { icon: <CreditCard className="w-4 h-4" />, label: "Барьцаа", value: fmtOrDash(contract.deposit) },
-            { icon: <Calendar className="w-4 h-4" />, label: "Эхлэх огноо", value: contract.startDate },
-            { icon: <Calendar className="w-4 h-4" />, label: "Дуусах огноо", value: contract.endDate },
-            { icon: <Clock className="w-4 h-4" />, label: "Төлбөрийн өдөр", value: contract.payDay != null ? `Сарын ${contract.payDay}-нд` : "—" },
-          ].map((row, i, arr) => (
-            <div
-              key={i}
-              className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? "border-b border-border" : ""}`}
-            >
-              <span className="text-muted-foreground shrink-0">{row.icon}</span>
-              <span className="text-sm text-muted-foreground w-28 shrink-0">{row.label}</span>
-              <span className="text-sm font-medium text-foreground flex-1 text-right">{row.value}</span>
-            </div>
-          ))}
-        </div>
+        metaRows.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            {metaRows.map((row, i, arr) => (
+              <div
+                key={i}
+                className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? "border-b border-border" : ""}`}
+              >
+                <span className="text-muted-foreground shrink-0">{row.icon}</span>
+                <span className="text-sm text-muted-foreground w-28 shrink-0">{row.label}</span>
+                <span className="text-sm font-medium text-foreground flex-1 text-right">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
+            Гэрээнээс мэдээлэл салгаж чадсангүй.
+          </p>
+        )
       )}
       </div>
     </div>

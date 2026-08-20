@@ -293,14 +293,14 @@ export function ContractUploadFlow() {
             if (e.target.checked) setError(null);
           }}
           disabled={isBusy}
-          className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border text-primary accent-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="text-brand mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border accent-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50"
         />
         <span className="text-[11px] leading-relaxed text-muted-foreground">
           Би{" "}
           <Link
             href="/legal/disclaimer"
             onClick={(e) => e.stopPropagation()}
-            className="font-medium text-primary underline-offset-2 hover:underline"
+            className="text-brand font-medium underline-offset-2 hover:underline"
           >
             анхааруулга
           </Link>
@@ -308,7 +308,7 @@ export function ContractUploadFlow() {
           <Link
             href="/legal/privacy_policy"
             onClick={(e) => e.stopPropagation()}
-            className="font-medium text-primary underline-offset-2 hover:underline"
+            className="text-brand font-medium underline-offset-2 hover:underline"
           >
             нууцлалын бодлого
           </Link>{" "}
@@ -316,7 +316,7 @@ export function ContractUploadFlow() {
           <Link
             href="/legal/terms_of_service"
             onClick={(e) => e.stopPropagation()}
-            className="font-medium text-primary underline-offset-2 hover:underline"
+            className="text-brand font-medium underline-offset-2 hover:underline"
           >
             үйлчилгээний нөхцөл
           </Link>
@@ -327,8 +327,8 @@ export function ContractUploadFlow() {
       {/* upload zone / quote gate */}
       {showGate ? (
         <SettleIn>
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+          <div className="border-brand/20 bg-brand/5 rounded-2xl border p-5">
+            <div className="text-brand flex items-center gap-2 text-sm font-semibold">
               <Coins className="size-4" />
               Шинжилгээний төлбөр
             </div>
@@ -404,8 +404,8 @@ export function ContractUploadFlow() {
               state === "success"
                 ? "border-emerald-500/40 bg-emerald-500/5"
                 : dragOver && consentAccepted
-                  ? "border-primary bg-primary/5 scale-[0.998]"
-                  : "border-border bg-card hover:border-primary/50 hover:bg-primary/3"
+                  ? "border-brand bg-brand/5 scale-[0.998]"
+                  : "border-border bg-card hover:border-brand/50 hover:bg-brand/3"
             }
             ${isBusy ? "pointer-events-none" : ""}
             ${shake ? "animate-shake" : ""}`}
@@ -422,8 +422,8 @@ export function ContractUploadFlow() {
               </SettleIn>
             ) : (
               <SettleIn key="drop" className="flex flex-col items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Upload className="w-7 h-7 text-primary" />
+                <div className="bg-brand/10 flex size-14 items-center justify-center rounded-2xl">
+                  <Upload className="text-brand size-7" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-foreground">PDF гэрээ оруулах</p>

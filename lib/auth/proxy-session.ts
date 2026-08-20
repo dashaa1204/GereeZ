@@ -1,11 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { DEMO_ATTEMPT_PARAM, isDemoAutoLoginEnabled } from "@/lib/demo-user";
+import { DASHBOARD_PATH } from "@/lib/routes";
 
 /** Paths reachable without an authenticated session. */
 const PUBLIC_PREFIXES = ["/login", "/legal", "/auth", "/demo"];
 
 function isPublicPath(pathname: string): boolean {
+  // "/" is the marketing landing page. It is matched exactly rather than added
+  // to PUBLIC_PREFIXES, where its trailing-slash form would whitelist the
+  // entire app.
+  if (pathname === "/") return true;
   return PUBLIC_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -72,10 +77,11 @@ export async function updateSession(
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Already signed in but visiting /login → send to the dashboard.
-  if (user && pathname === "/login") {
+  // Already signed in but visiting the landing page or /login → the dashboard
+  // is what they actually want.
+  if (user && (pathname === "/login" || pathname === "/")) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/";
+    redirectUrl.pathname = DASHBOARD_PATH;
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }

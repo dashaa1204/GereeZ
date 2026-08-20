@@ -11,6 +11,7 @@ import {
 } from "@/lib/services/site-content.client";
 import type { SiteContent, SiteContentSlug } from "@/lib/types";
 import { SITE_CONTENT_SLUGS } from "@/lib/types";
+import { DASHBOARD_PATH } from "@/lib/routes";
 
 const ADMIN_SECRET_KEY = "gereez-admin-secret";
 
@@ -95,14 +96,14 @@ export default function LegalSettingsPage() {
       <header className="sticky top-0 z-10 border-b border-border bg-white px-4 py-3">
         <div className="mx-auto flex max-w-md items-center gap-3 lg:max-w-3xl">
           <Link
-            href="/"
-            className="flex size-8 items-center justify-center rounded-lg text-navy hover:bg-muted"
+            href={DASHBOARD_PATH}
+            className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted"
             aria-label="Буцах"
           >
             <ArrowLeft className="size-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold text-navy">Хуулийн текст</h1>
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">Хуулийн текст</h1>
             <p className="text-[11px] text-muted-foreground">
               Анхааруулга, нууцлал, үйлчилгээний нөхцөл
             </p>
@@ -136,7 +137,7 @@ export default function LegalSettingsPage() {
               onClick={() => handleSelectSlug(slug)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 activeSlug === slug
-                  ? "bg-navy text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "border border-border bg-white text-muted-foreground"
               }`}
             >
@@ -180,7 +181,7 @@ export default function LegalSettingsPage() {
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saving || !content.trim()}
-                className="gap-2 bg-navy text-white hover:bg-navy/90"
+                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 {saving ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -192,7 +193,7 @@ export default function LegalSettingsPage() {
 
               <Link
                 href={`/legal/${activeSlug}`}
-                className="text-xs font-medium text-navy underline-offset-2 hover:underline"
+                className="text-xs font-medium text-brand underline-offset-2 hover:underline"
               >
                 Урьдчилан харах
               </Link>

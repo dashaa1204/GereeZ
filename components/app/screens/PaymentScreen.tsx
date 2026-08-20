@@ -6,6 +6,7 @@ import { CreditCard, Loader2, ShieldCheck, TrendingUp, Upload } from "lucide-rea
 import { CREDIT_PACKS } from "@/lib/credit-packs";
 import { rechargeCredits } from "@/lib/services/credits.client";
 import { fmt } from "../display";
+import { Eyebrow, IconChip, Panel, PanelGlow } from "../kit";
 
 export function PaymentScreen({ credits }: { credits: number }) {
   const router = useRouter();
@@ -36,28 +37,29 @@ export function PaymentScreen({ credits }: { credits: number }) {
     <div className="space-y-5 lg:grid lg:max-w-4xl lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
       <div className="space-y-5">
       {/* balance card */}
-      <div className="rounded-2xl bg-primary text-primary-foreground px-5 py-6">
-        <p className="text-sm opacity-70 mb-1">Одоогийн үлдэгдэл</p>
-        <div className="flex items-end gap-1">
-          <span className="text-5xl font-bold">{balance}</span>
-          <span className="text-lg opacity-70 mb-2">кредит</span>
+      <Panel className="px-5 py-6">
+        <PanelGlow />
+        <div className="relative">
+          <p className="mb-1 text-sm text-white/60">Одоогийн үлдэгдэл</p>
+          <div className="flex items-end gap-1.5">
+            <span className="text-5xl font-bold tracking-tight text-white">{balance}</span>
+            <span className="mb-2 text-lg text-white/70">кредит</span>
+          </div>
+          <p className="mt-2 text-xs text-white/50">1 кредит = 1 гэрээний хуудас</p>
         </div>
-        <p className="text-xs opacity-60 mt-2">1 кредит = 1 гэрээний хуудас</p>
-      </div>
+      </Panel>
 
       {/* how it works */}
-      <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+      <div className="space-y-3.5 rounded-2xl border border-border bg-card p-5">
         <h3 className="text-sm font-semibold text-foreground">Хэрхэн ажилладаг вэ?</h3>
         {[
-          { icon: <Upload className="w-4 h-4 text-primary" />, text: "PDF гэрээ оруулна" },
-          { icon: <TrendingUp className="w-4 h-4 text-primary" />, text: "AI хуудас тус бүрийг шинжилнэ" },
-          { icon: <ShieldCheck className="w-4 h-4 text-emerald-500" />, text: "Хуулийн зөрчлийг тайлагнана" },
-        ].map((s, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              {s.icon}
-            </div>
-            <p className="text-sm text-foreground">{s.text}</p>
+          { icon: Upload, text: "PDF гэрээ оруулна" },
+          { icon: TrendingUp, text: "AI хуудас тус бүрийг шинжилнэ" },
+          { icon: ShieldCheck, text: "Хуулийн зөрчлийг тайлагнана" },
+        ].map((step) => (
+          <div key={step.text} className="flex items-center gap-3">
+            <IconChip icon={step.icon} className="size-9 rounded-xl" />
+            <p className="text-sm text-foreground">{step.text}</p>
           </div>
         ))}
       </div>
@@ -66,31 +68,31 @@ export function PaymentScreen({ credits }: { credits: number }) {
       <div className="space-y-5">
       {/* packs */}
       <div>
-        <h3 className="text-sm font-semibold text-foreground mb-3">Кредит авах</h3>
+        <Eyebrow className="mb-3">Кредит авах</Eyebrow>
         <div className="space-y-2.5">
           {CREDIT_PACKS.map((p) => (
             <button
               key={p.credits}
               onClick={() => setSelected(p.credits)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl border-2 transition-all ${
+              className={`flex w-full items-center justify-between rounded-2xl border-2 px-4 py-3.5 transition-all ${
                 selected === p.credits
-                  ? "border-primary bg-primary/8"
-                  : "border-border bg-card hover:border-primary/40"
+                  ? "border-brand bg-brand/8"
+                  : "border-border bg-card hover:border-brand/40"
               }`}
             >
               <div className="flex items-center gap-3">
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                  selected === p.credits ? "border-primary" : "border-muted-foreground"
+                  selected === p.credits ? "border-brand" : "border-muted-foreground"
                 }`}>
                   {selected === p.credits && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                    <div className="bg-brand size-2.5 rounded-full" />
                   )}
                 </div>
                 <div className="text-left">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-foreground">{p.credits} кредит</span>
                     {p.popular && (
-                      <span className="text-xs font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                      <span className="bg-brand/12 text-brand rounded-full px-2 py-0.5 text-xs font-semibold">
                         Алдартай
                       </span>
                     )}

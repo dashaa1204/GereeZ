@@ -74,7 +74,7 @@ export function FindingRow({ f }: { f: AuditFinding }) {
                   canOpenLaw ? "hover:bg-muted/50" : "cursor-default"
                 }`}
               >
-                <Scale className="w-3.5 h-3.5 shrink-0 text-primary" />
+                <Scale className="text-brand size-3.5 shrink-0" />
                 <span className="flex-1 min-w-0 text-xs font-medium text-foreground">
                   {f.article}
                 </span>

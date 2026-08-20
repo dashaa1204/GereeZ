@@ -28,7 +28,7 @@ export function LoadingSpinner({
       aria-live="polite"
       aria-busy="true"
     >
-      <Loader2 className={cn("animate-spin text-navy", sizeClass[size])} />
+      <Loader2 className={cn("animate-spin text-brand", sizeClass[size])} />
       {label && <p className="text-sm">{label}</p>}
     </div>
   );

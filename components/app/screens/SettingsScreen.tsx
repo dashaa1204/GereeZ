@@ -103,7 +103,7 @@ export function SettingsScreen({
     <div className="space-y-5 lg:max-w-2xl">
       {/* profile */}
       <div className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold shrink-0 uppercase">
+        <div className="bg-panel text-panel-foreground flex size-14 shrink-0 items-center justify-center rounded-2xl text-xl font-bold uppercase">
           {displayName.charAt(0)}
         </div>
         <div className="min-w-0 flex-1">
@@ -116,14 +116,14 @@ export function SettingsScreen({
                 disabled={savingName}
                 autoFocus
                 maxLength={60}
-                className="h-8 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-primary"
+                className="focus:border-brand h-8 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-none"
                 placeholder="Таны нэр"
               />
               <button
                 onClick={saveName}
                 disabled={savingName || !nameDraft.trim()}
                 aria-label="Нэр хадгалах"
-                className="shrink-0 flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-50"
+                className="bg-brand text-brand-foreground flex size-8 shrink-0 items-center justify-center rounded-lg disabled:opacity-50"
               >
                 {savingName ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -164,7 +164,7 @@ export function SettingsScreen({
       )}
 
       {/* settings rows */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {/* dark mode toggle */}
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
           <div className="flex items-center gap-3">
@@ -173,7 +173,7 @@ export function SettingsScreen({
           </div>
           <button
             onClick={toggle}
-            className={`relative w-11 h-6 rounded-full transition-colors ${dark ? "bg-primary" : "bg-muted"}`}
+            className={`relative h-6 w-11 rounded-full transition-colors ${dark ? "bg-brand" : "bg-muted"}`}
           >
             <span
               className={`absolute top-0.5 left-0.5 size-5 rounded-full border border-border bg-background shadow-sm transition-transform ${dark ? "translate-x-5" : "translate-x-0"}`}
@@ -196,7 +196,7 @@ export function SettingsScreen({
         ))}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <button
           onClick={signOut}
           disabled={signingOut}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { DASHBOARD_PATH } from "@/lib/routes";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -102,7 +103,7 @@ export function AuthForm() {
   return (
     <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-6 shadow-sm">
       <div className="mb-6 text-center">
-        <h1 className="text-xl font-bold text-navy">
+        <h1 className="text-xl font-bold tracking-tight text-foreground">
           {mode === "signin" ? "Нэвтрэх" : "Бүртгүүлэх"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -126,7 +127,7 @@ export function AuthForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
-            className="h-11 w-full rounded-lg border border-border bg-muted/20 px-3 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 disabled:opacity-50"
+            className="h-11 w-full rounded-lg border border-border bg-muted/20 px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-50"
             placeholder="you@example.com"
           />
         </div>
@@ -147,7 +148,7 @@ export function AuthForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              className="h-11 w-full rounded-lg border border-border bg-muted/20 py-0 pl-3 pr-10 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 disabled:opacity-50"
+              className="h-11 w-full rounded-lg border border-border bg-muted/20 py-0 pl-3 pr-10 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-50"
               placeholder="••••••••"
             />
             <button
@@ -175,7 +176,7 @@ export function AuthForm() {
               type="button"
               onClick={handleForgotPassword}
               disabled={loading}
-              className="text-xs font-medium text-navy hover:underline disabled:opacity-50"
+              className="text-brand text-xs font-medium hover:underline disabled:opacity-50"
             >
               Нууц үг мартсан?
             </button>
@@ -190,7 +191,7 @@ export function AuthForm() {
         )}
 
         {notice && (
-          <div className="flex items-start gap-2 rounded-lg bg-navy/10 px-3 py-2 text-xs text-navy">
+          <div className="bg-brand/10 text-brand flex items-start gap-2 rounded-lg px-3 py-2 text-xs">
             <Mail className="mt-0.5 size-3.5 shrink-0" />
             {notice}
           </div>
@@ -199,7 +200,7 @@ export function AuthForm() {
         <Button
           type="submit"
           disabled={loading}
-          className="h-11 w-full gap-2 rounded-lg bg-navy text-white hover:bg-navy/90 active:scale-[0.98]"
+          className="h-11 w-full gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98]"
         >
           {loading && <Loader2 className="size-4 animate-spin" />}
           {mode === "signin" ? "Нэвтрэх" : "Бүртгүүлэх"}
@@ -215,7 +216,7 @@ export function AuthForm() {
             setError(null);
             setNotice(null);
           }}
-          className="font-medium text-navy hover:underline"
+          className="text-brand font-medium hover:underline"
         >
           {mode === "signin" ? "Бүртгүүлэх" : "Нэвтрэх"}
         </button>
@@ -230,9 +231,9 @@ export function AuthForm() {
  * the user to an external phishing site after login.
  */
 function safeRedirect(value: string | null): string {
-  if (!value) return "/";
+  if (!value) return DASHBOARD_PATH;
   if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
-    return "/";
+    return DASHBOARD_PATH;
   }
   return value;
 }

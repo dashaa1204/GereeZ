@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "GereeZ",
     description:
       "Монгол улсын түрээсийн гэрээний хуулийн нийцлийг AI-аар шалгаж, хугацааг нь хянах платформ",
-    start_url: "/",
+    start_url: "/app",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ffffff",

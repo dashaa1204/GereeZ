@@ -11,6 +11,8 @@
  * contracts.
  */
 
+import { DASHBOARD_PATH } from "@/lib/routes";
+
 export interface DemoCredentials {
   email: string;
   password: string;
@@ -44,8 +46,10 @@ export const DEMO_ATTEMPT_PARAM = "demo";
  * demo/login routes (which would loop).
  */
 export function safeDemoRedirect(next: string | null | undefined): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/";
-  if (next.startsWith("/demo") || next.startsWith("/login")) return "/";
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return DASHBOARD_PATH;
+  if (next.startsWith("/demo") || next.startsWith("/login")) return DASHBOARD_PATH;
+  // The landing page bounces a signed-in visitor straight back here.
+  if (next === "/") return DASHBOARD_PATH;
   return next;
 }
 

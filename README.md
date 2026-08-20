@@ -24,11 +24,13 @@ MVP starts with **rent and civil-law contracts** in Mongolia. The architecture i
 
 ## Features (current)
 
+- Public landing page at `/` (the signed-in app lives at `/app`)
 - PDF or image contract upload (drag & drop, max 20 MB; scanned/image files are OCR'd with Google Cloud Vision, up to 50 scanned pages)
 - AI legal audit with compliance score (0–100)
-- Severity-based alerts (`high`, `medium`, `low`, `info`) with law references
+- Severity-based audit findings (`high`, `medium`, `low`, `info`) with law references
 - RAG pipeline against **Иргэний хууль** (Civil Code) via Supabase pgvector
-- Contract metadata extraction (parties, rent, deposit, dates) with expiry tracking and in-app alerts (read-state persisted)
+- Contract metadata extraction (parties, rent, deposit, dates, payment day, notice period) with expiry tracking
+- Notification feed of app-raised reminders, never a copy of the audit — audit findings stay on the audit screen and never appear here. It carries approaching deadlines (expiry countdown at 30/14/3/1/0 days then expired, notice-window warning, monthly payment-day reminder, deposit-return reminder after expiry) plus the account-level things the app has to raise itself (stranded or failed audits, low credit balance, a cited law that was re-ingested). Read-state persisted
 - Credit-based pay-per-audit flow: 1 page = 1 credit, quote → confirm → audit (demo top-up for now — no payment provider yet)
 - Contract and account deletion, password reset, editable profile name
 - Installable as a PWA (web app manifest + icons)
@@ -98,7 +100,8 @@ NEXT_PUBLIC_DEMO_UI=false
 For a fresh project, run the combined script `supabase/setup-all.sql` in the
 Supabase SQL Editor — it covers everything: contracts + private bucket +
 per-user RLS, the pgvector legal store, site content, rate limits, credits
-(010), contract tracking dates (011), and alert read-state (012).
+(010), contract tracking dates (011), alert read-state (012), and law
+version stamps for notifications (013).
 
 For an existing project, apply only the new numbered files from
 `supabase/migrations/` in order.
@@ -137,11 +140,12 @@ app/
   api/contracts/upload/   # PDF → Supabase Storage + DB
   api/contracts/audit/      # AI audit + save results
   api/legal/ingest/       # Legal document ingestion
-  page.tsx                  # Dashboard (server component)
+  page.tsx                  # Public landing page (static)
+  (app)/app/page.tsx        # Dashboard (server component)
 
 components/
-  contracts/ContractUpload.tsx
-  dashboard/                # Metrics, alerts, contract list
+  landing/                  # Landing page sections
+  app/screens/              # Home, contracts, audit, alerts, settings
   ui/                       # shadcn components
 
 lib/

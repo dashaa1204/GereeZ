@@ -45,8 +45,8 @@ VISUAL SYSTEM (match the existing build):
 - Mobile-first, single column, max ~420px, bottom tab nav (Home, Contracts,
   Alerts, Settings).
 - Light + dark mode.
-- Colors: white/near-black base, deep navy for headers, green = compliant/safe,
-  amber = warning, red = legal violation/high risk.
+- Colors: white/near-black base, emerald green as the single accent, near-black
+  panels for emphasis, amber = warning, red = legal violation/high risk.
 - Font: Geist. Corner radius ~10px. Soft cards, generous whitespace.
 - Language: all UI copy in MONGOLIAN (Cyrillic). e.g. "Нийцлийн оноо",
   "Анхааруулга", "Барьцаа", "Сарын түрээс".
@@ -70,7 +70,7 @@ SCREENS TO DESIGN (light + dark each):
 3. Дэлгэц бүрийг давтаж сайжруул, ж: *"make the audit-result screen more
    detailed, show the severity badges and Civil Code article citations"*.
 4. Brand тогтвортой байлгахын тулд эхэнд өнгө/фонтоо тодорхой зааж өг
-   (navy, green, amber, Geist).
+   (near-black, emerald, amber, Geist).
 
 ---
 
@@ -78,16 +78,25 @@ SCREENS TO DESIGN (light + dark each):
 
 Эх сурвалж: `app/globals.css` (oklch). Figma-д ойролцоо hex:
 
-| Үүрэг | Токен | Ойролцоо hex |
-|------|-------|--------------|
+| Үүрэг | Токен | Тэмдэглэл |
+|------|-------|-----------|
 | Background (light) | `--background` | `#ffffff` |
 | Foreground (text) | `--foreground` | `#252525` |
-| Navy (headers) | `--navy` | `#2a3142` |
+| Brand accent (ногоон) | `--brand` | Цорын ганц өргөлт. Light 4.75:1 цагаан дээр (AA) |
+| Brand on panel | `--brand-bright` | Хар самбар дээрх ногоон, хоёр горимд ижил |
+| Panel (хар самбар) | `--panel` | Онцлох гадаргуу. Dark горимд гэрэлтэж, +hairline border |
 | Success (нийцсэн) | `--success` | `#1f9d55` |
 | Warning (анхаар) | `--warning` | `#d98a26` |
 | Destructive (зөрчил) | `--destructive` | `#dc2626` |
 | Border | `--border` | `#e5e5e5` |
 | Background (dark) | `--background` dark | `#252525` |
+
+> `--navy` токен хасагдсан: dark горимд утга тодорхойлоогүй байсан тул харанхуй
+> дэвсгэр дээр бараг харагдахгүй байв. Хэрэглээ нь `--foreground` (текст),
+> `--primary` (дүүргэсэн товч), `--brand` (холбоос, өргөлт) рүү шилжсэн.
+
+Давтагдах хэв маягууд `components/app/kit.tsx`-д цуглуулагдсан:
+`Eyebrow`, `SectionHeading`, `Panel`, `PanelGlow`, `Card`, `IconChip`, `Chip`.
 
 - Фонт: **Geist** (sans), heading-д мөн Geist.
 - Corner radius суурь: `--radius: 0.625rem` (~10px).
@@ -102,3 +111,5 @@ SCREENS TO DESIGN (light + dark each):
 - Home dashboard: `components/dashboard/HomeDashboard.tsx`
 - Audit үр дүн: `components/contracts/AnalysisResults.tsx`
 - Өнгө / design системийн токен: `app/globals.css`
+- Хуваалцсан UI хэв маяг: `components/app/kit.tsx`
+- Landing хуудас: `components/landing/`

@@ -71,7 +71,7 @@ export function ProgressRing({
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             className={cn(
-              complete ? "text-success-complete" : "text-navy",
+              complete ? "text-success-complete" : "text-foreground",
               "transition-[stroke-dashoffset] duration-300",
             )}
             style={{ transitionTimingFunction: "var(--ease-settle)" }}

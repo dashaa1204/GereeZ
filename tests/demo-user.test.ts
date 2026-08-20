@@ -5,6 +5,7 @@ import {
   isDemoEmail,
   safeDemoRedirect,
 } from "@/lib/demo-user";
+import { DASHBOARD_PATH } from "@/lib/routes";
 
 const KEYS = ["DEMO_USER_EMAIL", "DEMO_USER_PASSWORD", "DEMO_AUTOLOGIN"] as const;
 
@@ -80,11 +81,16 @@ describe("safeDemoRedirect", () => {
   });
 
   it("refuses off-site and looping targets", () => {
-    expect(safeDemoRedirect("https://evil.example")).toBe("/");
-    expect(safeDemoRedirect("//evil.example")).toBe("/");
-    expect(safeDemoRedirect("/demo")).toBe("/");
-    expect(safeDemoRedirect("/login?redirect=/")).toBe("/");
-    expect(safeDemoRedirect(null)).toBe("/");
-    expect(safeDemoRedirect("")).toBe("/");
+    expect(safeDemoRedirect("https://evil.example")).toBe(DASHBOARD_PATH);
+    expect(safeDemoRedirect("//evil.example")).toBe(DASHBOARD_PATH);
+    expect(safeDemoRedirect("/demo")).toBe(DASHBOARD_PATH);
+    expect(safeDemoRedirect("/login?redirect=/")).toBe(DASHBOARD_PATH);
+    expect(safeDemoRedirect(null)).toBe(DASHBOARD_PATH);
+    expect(safeDemoRedirect("")).toBe(DASHBOARD_PATH);
+  });
+
+  it("sends the landing page to the dashboard", () => {
+    // "/" is the marketing page; a just-signed-in visitor belongs in the app.
+    expect(safeDemoRedirect("/")).toBe(DASHBOARD_PATH);
   });
 });
