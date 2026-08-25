@@ -1,0 +1,832 @@
+<title>DoGood Identity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime&family=Libre+Caslon+Display&family=Libre+Franklin:wght@400;500;600;700&display=swap">
+
+<style>
+/* ---------- tokens: light is the base, dark redefines only values ---------- */
+:root{
+  --paper:#EDEEE4;
+  --paper-2:#E3E5D8;
+  --ink:#12201A;
+  --ink-2:#4B5A50;
+  --rule:#C6CCBB;
+  --seal:#2C6A4C;
+  --back:#6E9F4E;
+  --ribbon:#2B4C8F;
+  --copper:#A9662F;
+  --plate:#0E1A14;
+  --plate-fg:#EDEEE4;
+  --wrong:#A33B2A;
+  --shadow:rgba(18,32,26,.10);
+
+  --f-display:"Libre Caslon Display",Georgia,"Times New Roman",serif;
+  --f-body:"Libre Franklin",-apple-system,Segoe UI,Roboto,sans-serif;
+  --f-mono:"Courier Prime",ui-monospace,Menlo,Consolas,monospace;
+
+  --wrap:1080px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0B120F;
+    --paper-2:#141F19;
+    --ink:#E9EADF;
+    --ink-2:#93A395;
+    --rule:#26332C;
+    --seal:#4E9E76;
+    --back:#9ACB78;
+    --ribbon:#7C9EDC;
+    --copper:#D28B52;
+    --plate:#16241D;
+    --plate-fg:#E9EADF;
+    --wrong:#E08A76;
+    --shadow:rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0B120F;
+  --paper-2:#141F19;
+  --ink:#E9EADF;
+  --ink-2:#93A395;
+  --rule:#26332C;
+  --seal:#4E9E76;
+  --back:#9ACB78;
+  --ribbon:#7C9EDC;
+  --copper:#D28B52;
+  --plate:#16241D;
+  --plate-fg:#E9EADF;
+  --wrong:#E08A76;
+  --shadow:rgba(0,0,0,.45);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:16px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--seal)}
+:focus-visible{outline:2px solid var(--back);outline-offset:3px;border-radius:2px}
+
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 28px}
+
+/* ---------- shared typography ---------- */
+.eyebrow{
+  font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--ink-2);margin:0;
+}
+h1,h2,h3{text-wrap:balance;margin:0}
+h2{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,3.4vw,38px);line-height:1.15}
+h3{font-family:var(--f-display);font-weight:400;font-size:24px;line-height:1.2}
+p{margin:0}
+.lede{font-size:18px;color:var(--ink-2);max-width:62ch}
+.note{font-size:14px;color:var(--ink-2);max-width:64ch}
+.mono{font-family:var(--f-mono);font-size:12px;letter-spacing:.02em}
+
+section{padding:76px 0;border-top:1px solid var(--rule)}
+.sec-head{display:flex;flex-direction:column;gap:12px;margin-bottom:44px;max-width:66ch}
+
+/* ---------- hero ---------- */
+.hero{position:relative;overflow:hidden;padding:0;border-top:none}
+#guilloche{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hero-inner{position:relative;display:flex;flex-direction:column;gap:26px;padding-top:112px;padding-bottom:96px}
+.hero h1{
+  font-family:var(--f-display);font-weight:400;
+  font-size:clamp(58px,11vw,124px);line-height:.92;letter-spacing:-.02em;margin:0;
+}
+.hero h1 em{font-style:normal;color:var(--seal)}
+.hero-sub{font-size:19px;max-width:52ch;color:var(--ink-2)}
+.hero-mark{width:88px;height:88px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:10px 28px;padding-top:14px;border-top:1px solid var(--rule)}
+.hero-meta span{font-family:var(--f-mono);font-size:12px;color:var(--ink-2)}
+
+/* ---------- mark styling (all SVG colour lives here) ---------- */
+.mark{--mark-line:var(--plate-fg);--mark-accent:var(--back);display:block;overflow:visible}
+.mark .ring{fill:none;stroke:var(--mark-line);stroke-width:3.2;transition:stroke .18s,stroke-width .18s}
+.mark .ring.is-on{stroke:var(--mark-accent);stroke-width:5}
+.mark .dot{fill:var(--mark-line);opacity:.3}
+.mark .dot.on{fill:var(--mark-accent);opacity:1}
+.mark .ray{stroke:var(--mark-line);stroke-width:3.2;stroke-linecap:round}
+.mark .disc{fill:var(--mark-accent)}
+.mark .horizon{stroke:var(--mark-line);stroke-width:3.2;stroke-linecap:round}
+.mark .lens{fill:none;stroke:var(--mark-line);stroke-width:3.2}
+.mark .vesica{fill:var(--mark-accent)}
+.mark .seg{stroke:var(--mark-line);stroke-width:2.4;stroke-linecap:round}
+.mark .rose ellipse{fill:none;stroke:var(--mark-accent);stroke-width:.55;opacity:.85}
+.mark .core{fill:var(--plate);stroke:var(--mark-line);stroke-width:2}
+.mark .monogram{fill:var(--mark-line);font-family:var(--f-display);font-size:52px;text-anchor:middle}
+
+.on-paper{--mark-line:var(--ink);--mark-accent:var(--seal)}
+.on-paper .core{fill:var(--paper-2)}
+.on-solid{--mark-line:var(--paper);--mark-accent:var(--paper)}
+.on-solid .core{fill:var(--seal)}
+
+/* ---------- plates ---------- */
+.plates{display:flex;flex-direction:column;gap:64px}
+.plate{display:grid;grid-template-columns:340px 1fr;gap:44px;align-items:start}
+.plate-stage{
+  background:var(--plate);border:1px solid var(--rule);
+  aspect-ratio:1;display:grid;place-items:center;padding:44px;
+  box-shadow:0 1px 0 var(--shadow);
+}
+.plate-stage .mark{width:100%;height:100%}
+.plate-body{display:flex;flex-direction:column;gap:16px;padding-top:4px}
+.plate-no{font-family:var(--f-mono);font-size:12px;letter-spacing:.16em;color:var(--back)}
+.plate-en{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);letter-spacing:.04em}
+.plate-body p{max-width:56ch;font-size:15.5px}
+.src{
+  border-left:2px solid var(--back);padding-left:14px;
+  font-size:14px;color:var(--ink-2);max-width:54ch;
+}
+.src b{color:var(--ink);font-weight:600}
+.variants{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.chip{
+  display:flex;align-items:center;gap:10px;border:1px solid var(--rule);
+  padding:8px 14px 8px 10px;background:var(--paper-2);
+}
+.chip .mark{width:34px;height:34px;flex:none}
+.chip.solid{background:var(--seal);border-color:var(--seal)}
+.chip.tiny .mark{width:20px;height:20px}
+.chip span{font-family:var(--f-mono);font-size:11px;color:var(--ink-2)}
+.chip.solid span{color:var(--paper);opacity:.85}
+.tag-pick{
+  display:inline-flex;align-items:center;gap:8px;align-self:flex-start;
+  background:var(--back);color:#0E1A14;
+  font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  padding:5px 11px;
+}
+
+/* ---------- chosen mark: lockups & rules ---------- */
+.lockups{display:grid;grid-template-columns:repeat(auto-fit,minmax(236px,1fr));gap:22px}
+.lk{display:flex;flex-direction:column;gap:10px}
+.lk-stage{background:var(--paper-2);border:1px solid var(--rule);aspect-ratio:1.6;display:grid;place-items:center;padding:22px}
+.lk .cap{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-2)}
+.lockup-h{display:flex;align-items:center;gap:15px}
+.lockup-h .mark{width:52px;height:52px;flex:none}
+.lockup-v{display:flex;flex-direction:column;align-items:center;gap:13px}
+.lockup-v .mark{width:54px;height:54px}
+.lockup-v .wm{align-items:center}
+.wm{display:flex;flex-direction:column;line-height:1}
+.wm .nm{font-family:var(--f-display);font-size:29px;letter-spacing:-.01em}
+.wm .nm em{font-style:normal;color:var(--seal)}
+.wm .sub{font-size:9.5px;font-weight:600;letter-spacing:.3em;color:var(--ink-2);margin-top:7px}
+.lk-stage>.mark{width:78px;height:78px}
+
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:22px}
+.rule-box{background:var(--paper-2);border:1px solid var(--rule);padding:24px;display:flex;flex-direction:column;gap:18px}
+.rule-box h3{font-size:19px}
+.rule-box .note{font-size:13.5px}
+.cs-frame{position:relative;width:172px;padding:22px;border:1px dashed var(--back);display:grid;place-items:center;margin:0 auto}
+.cs-frame .mark{width:128px;height:128px}
+.cs-frame .x{position:absolute;font-family:var(--f-mono);font-size:10px;color:var(--back)}
+.cs-frame .x-t{top:5px;left:50%;transform:translateX(-50%)}
+.cs-frame .x-l{left:6px;top:50%;transform:translateY(-50%)}
+.sizes{display:flex;align-items:flex-end;justify-content:center;gap:32px;padding:12px 0}
+.size{display:flex;flex-direction:column;align-items:center;gap:9px}
+.size .mark{flex:none}
+.size .s48{width:48px;height:48px}
+.size .s28{width:28px;height:28px}
+.size .s20{width:20px;height:20px}
+.size span{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-2)}
+
+.donts{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:16px;margin-top:22px}
+.dont{display:flex;flex-direction:column;gap:9px;align-items:center;text-align:center}
+.dont-stage{width:100%;aspect-ratio:1.35;background:var(--paper-2);border:1px solid var(--rule);display:grid;place-items:center;overflow:hidden}
+.dont-stage .mark{width:62px;height:62px}
+.dont .lbl{font-size:12.5px;color:var(--wrong);line-height:1.4}
+.d-stretch .mark{transform:scaleX(1.5)}
+.d-rot .mark{transform:rotate(22deg)}
+.d-low .dont-stage{background:#6E9F4E;border-color:#6E9F4E}
+.d-low .mark{--mark-line:#5C8A41;--mark-accent:#5C8A41}
+
+/* ---------- virtues ---------- */
+.virtue-grid{display:grid;grid-template-columns:1fr 300px;gap:52px;align-items:start}
+.vlist{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.vlist li{
+  display:grid;grid-template-columns:34px 1fr 1.15fr;gap:16px;align-items:baseline;
+  padding:11px 8px;border-bottom:1px solid var(--rule);cursor:default;
+  transition:background .15s;
+}
+.vlist li:hover,.vlist li:focus{background:var(--paper-2);outline:none}
+.vlist li:hover .v-mn,.vlist li:focus .v-mn{color:var(--seal)}
+.v-no{font-family:var(--f-mono);font-size:12px;color:var(--back);font-variant-numeric:tabular-nums}
+.v-en{font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2)}
+.v-mn{font-size:15.5px;font-weight:500;transition:color .15s}
+.virtue-aside{position:sticky;top:32px;display:flex;flex-direction:column;gap:16px}
+.virtue-aside .stage{background:var(--plate);border:1px solid var(--rule);padding:32px;aspect-ratio:1;display:grid;place-items:center}
+.virtue-aside .mark{width:100%;height:100%}
+
+/* ---------- palette ---------- */
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:2px;border:1px solid var(--rule)}
+.sw{padding:20px 18px;display:flex;flex-direction:column;gap:6px;min-height:190px}
+.sw b{font-size:14.5px;font-weight:600}
+.sw .hex{font-family:var(--f-mono);font-size:12px;opacity:.72}
+.sw .use{font-size:12.5px;line-height:1.45;opacity:.78;margin-top:auto}
+
+/* ---------- type ---------- */
+.type-rows{display:flex;flex-direction:column;gap:32px}
+.type-row{display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start;padding-bottom:32px;border-bottom:1px solid var(--rule)}
+.type-row:last-child{border-bottom:none;padding-bottom:0}
+.spec{display:flex;flex-direction:column;gap:6px}
+.spec b{font-size:15px}
+.spec .mono{color:var(--ink-2)}
+.spec p{font-size:13.5px;color:var(--ink-2)}
+.samp-display{font-family:var(--f-display);font-size:clamp(32px,5vw,52px);line-height:1.1}
+.samp-body{font-family:var(--f-body);font-size:17px;max-width:56ch}
+.samp-body .lg{display:block;font-size:26px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
+.samp-mono{font-family:var(--f-mono);font-size:15px;color:var(--ink-2)}
+
+/* ---------- applications ---------- */
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.app{display:flex;flex-direction:column;gap:10px}
+.app .cap{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-2)}
+.card{
+  aspect-ratio:1.75;background:var(--plate);color:var(--plate-fg);
+  padding:22px;display:flex;flex-direction:column;justify-content:space-between;
+  border:1px solid var(--rule);box-shadow:0 2px 0 var(--shadow);
+}
+.card .mark{width:40px;height:40px;flex:none}
+.card .nm{font-family:var(--f-display);font-size:21px;line-height:1.15}
+.card .dt{font-family:var(--f-mono);font-size:10.5px;opacity:.62;line-height:1.7}
+.card.green{background:var(--seal);border-color:var(--seal);color:var(--paper)}
+.stamp{
+  aspect-ratio:1.75;background:var(--paper-2);border:1px solid var(--rule);
+  display:grid;place-items:center;position:relative;overflow:hidden;
+}
+.stamp .mark{width:96px;height:96px}
+.stamp .ovl{position:absolute;bottom:14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;color:var(--ink-2)}
+.icons{aspect-ratio:1.75;background:var(--paper-2);border:1px solid var(--rule);display:flex;align-items:center;justify-content:center;gap:20px}
+.icons .box{background:var(--plate);display:grid;place-items:center;flex:none}
+.icons .b1{width:64px;height:64px;border-radius:14px}
+.icons .b2{width:36px;height:36px;border-radius:8px}
+.icons .b3{width:20px;height:20px;border-radius:4px}
+.icons .b1 .mark{width:40px;height:40px}
+.icons .b2 .mark{width:23px;height:23px}
+.icons .b3 .mark{width:13px;height:13px}
+
+/* ---------- closing ---------- */
+.rec{display:grid;grid-template-columns:1fr 1fr;gap:44px}
+.rec-card{background:var(--paper-2);border:1px solid var(--rule);padding:28px;display:flex;flex-direction:column;gap:14px}
+.rec-card h3{font-size:21px}
+.rec-card ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:14.5px;color:var(--ink-2)}
+.rec-card li b{color:var(--ink);font-weight:600}
+footer{padding:40px 0 64px;border-top:1px solid var(--rule)}
+footer p{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-2)}
+
+@media (max-width:860px){
+  .plate{grid-template-columns:1fr;gap:26px}
+  .plate-stage{max-width:340px}
+  .virtue-grid{grid-template-columns:1fr}
+  .virtue-aside{position:static;max-width:280px}
+  .rec{grid-template-columns:1fr}
+  .type-row{grid-template-columns:1fr;gap:16px}
+  .vlist li{grid-template-columns:28px 1fr;row-gap:2px}
+  .vlist .v-en{grid-column:2}
+  .story{grid-template-columns:1fr!important}
+  .rules{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+
+<header class="hero">
+  <canvas id="guilloche" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <svg class="mark on-paper hero-mark" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg>
+    <p class="eyebrow">Брэндийн тэмдэг &middot; Хавтан I сонгогдсон</p>
+    <h1>Do<em>Good</em><br>LLC</h1>
+    <p class="hero-sub">Бенжамин Франклины 13 зарчим, түүний өөрийн зохиосон Fugio зоос, мөн долларын сийлбэр &mdash; ногоон бэхний детайлаас сэдэвлэсэн таван тэмдэг.</p>
+    <div class="hero-meta">
+      <span>ЭХ СУРВАЛЖ &middot; B. FRANKLIN, 1706&ndash;1790</span>
+      <span>13 ЗАРЧИМ</span>
+      <span>GREENBACK #6E9F4E</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Нэрийн үндэс</p>
+      <h2>&laquo;Dogood&raquo; бол Франклины хамгийн анхны нэр</h2>
+    </div>
+    <div class="virtue-grid story" style="grid-template-columns:1fr 1fr">
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <p class="lede">1722 онд 16 настай Бенжамин Франклин ахынхаа сонинд өөрийн бичвэрийг хэвлүүлж чадахгүй байсан тул <b>Silence Dogood</b> хэмээх бэлэвсэн эмэгтэйн нэрээр захидал бичиж, шөнөөр хэвлэх газрын хаалган доогуур шургуулдаг байв.</p>
+        <p class="note">14 захидал хэвлэгдэж, Бостон хотыг шуугиулсан. Хэн бичсэнийг нь хожим мэдэхэд ах нь уурласан гэдэг. Өөрөөр хэлбэл <b>DoGood</b> гэдэг нэр Франклинтай зүгээр нэг санаагаараа биш, шууд түүхээрээ холбогддог &mdash; энэ бол брэндийн хамгийн хүчтэй тал.</p>
+      </div>
+      <div>
+        <div style="border:1px solid var(--rule);background:var(--paper-2);padding:26px;display:flex;flex-direction:column;gap:12px">
+          <p class="eyebrow">Слоганы санал</p>
+          <p style="font-family:var(--f-display);font-size:26px;line-height:1.25">&laquo;Өнөөдөр ямар сайныг бүтээх вэ?&raquo;</p>
+          <p class="note" style="font-size:13.5px">Франклин өдөр бүрийн хуваарьтаа өглөө нь <span class="mono">&laquo;What good shall I do this day?&raquo;</span>, орой нь <span class="mono">&laquo;What good have I done to-day?&raquo;</span> гэсэн хоёр асуултыг бичиж тавьсан байдаг. Компанийн өглөө&ndash;оройн хос уриа болгож болно.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Таван тэмдэг</p>
+      <h2>Концептууд</h2>
+      <p class="note">Тус бүр нь Франклины бодит зүйлээс гаралтай &mdash; зохиомол симбол алга. <b>Хавтан I сонгогдсон;</b> үлдсэн дөрөв нь харьцуулалт болон архивт үлдэнэ. Хажууд нь нэг өнгө, урвуу, 20px хувилбарыг харууллаа.</p>
+    </div>
+
+    <div class="plates">
+
+      <article class="plate">
+        <div class="plate-stage"><svg class="mark" viewBox="0 0 200 200" data-mark="links" role="img" aria-label="Арван гурван холбоос"></svg></div>
+        <div class="plate-body">
+          <p class="plate-no">ХАВТАН I</p>
+          <h3>Арван гурван холбоос</h3>
+          <p class="plate-en">THE THIRTEEN LINKS</p>
+          <span class="tag-pick">Сонгогдсон &mdash; үндсэн тэмдэг</span>
+          <p>13 цагираг хоорондоо сүлжилдэн бүтэн тойрог үүсгэнэ. Цагираг бүр нэг зарчим. Аль нэг нь тасарвал тойрог задардаг &mdash; зан чанарын тухай тодорхойлолт нь өөрөө хэлбэр болж байгаа нь.</p>
+          <p class="src"><b>Fugio цент, 1787.</b> АНУ-ын хамгийн анхны албан ёсны зоосыг Франклин өөрөө зохиосон. Ард талд нь 13 сүлжсэн цагираг, дунд нь <span class="mono">WE ARE ONE</span> гэсэн бичиг байдаг. Мөн энэ хэлбэр нь DoGood-ын <span class="mono">&laquo;O&raquo;</span> үсгийг орлож чадна.</p>
+          <div class="variants">
+            <div class="chip"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg><span>1 өнгө</span></div>
+            <div class="chip solid"><svg class="mark on-solid" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg><span>урвуу</span></div>
+            <div class="chip tiny"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" data-w="6" aria-hidden="true"></svg><span>20px</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="plate">
+        <div class="plate-stage"><svg class="mark" viewBox="0 0 200 200" data-mark="grid" role="img" aria-label="Буянны хуудас"></svg></div>
+        <div class="plate-body">
+          <p class="plate-no">ХАВТАН II</p>
+          <h3>Буянны хуудас</h3>
+          <p class="plate-en">THE VIRTUE CHART</p>
+          <p>13 мөр (зарчим) &times; 7 багана (долоо хоногийн өдрүүд). Дүүрсэн цэгүүд ташуугаар уруудаж байгаа нь Франклины арга барил өөрөө &mdash; долоо хоног бүр нэг зарчимд төвлөрч, 13 долоо хоногт нэг эргэлт хийнэ.</p>
+          <p class="src"><b>Франклины халаасны дэвтэр.</b> Тэрбээр өдөр бүр алдаагаа хар цэгээр тэмдэглэдэг байсан. Энэ тэмдэг нь лого гэхээсээ илүү <b>хэв маягийн систем</b> болж чадна &mdash; хавтас, дэвсгэр, бичиг цаасны ирмэг дээр давтагдана.</p>
+          <div class="variants">
+            <div class="chip"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="grid" data-compact="1" aria-hidden="true"></svg><span>1 өнгө</span></div>
+            <div class="chip solid"><svg class="mark on-solid" viewBox="0 0 200 200" data-mark="grid" data-compact="1" aria-hidden="true"></svg><span>урвуу</span></div>
+            <div class="chip tiny"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="grid" data-compact="1" aria-hidden="true"></svg><span>7&times;7 &middot; 20px</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="plate">
+        <div class="plate-stage"><svg class="mark" viewBox="0 0 200 200" data-mark="lens" role="img" aria-label="Хос линз"></svg></div>
+        <div class="plate-body">
+          <p class="plate-no">ХАВТАН III</p>
+          <h3>Хос линз</h3>
+          <p class="plate-en">THE BIFOCALS</p>
+          <p>Хоёр линз давхцаж <span class="mono">DoGood</span>-ын дундах <span class="mono">&laquo;oo&raquo;</span> үсгийг үүсгэнэ. Давхцсан хэсэг нь ашиг ба буян хоёр нийлэх талбай &mdash; компанийн үндсэн санааг нэг хэлбэрээр илэрхийлж байна.</p>
+          <p class="src"><b>Бифокал шил, 1784.</b> Франклин ойр, хол хоёрыг зэрэг харах шилийг зохион бүтээсэн. Ойрын ашиг, холын нэр хүнд хоёрыг зэрэг харна гэдэг санаа нь компанид шууд тохирно. Хамгийн жижигдээ хүртэл уншигдах, хамгийн энгийн хувилбар.</p>
+          <div class="variants">
+            <div class="chip"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="lens" aria-hidden="true"></svg><span>1 өнгө</span></div>
+            <div class="chip solid"><svg class="mark on-solid" viewBox="0 0 200 200" data-mark="lens" aria-hidden="true"></svg><span>урвуу</span></div>
+            <div class="chip tiny"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="lens" aria-hidden="true"></svg><span>20px</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="plate">
+        <div class="plate-stage"><svg class="mark" viewBox="0 0 200 200" data-mark="sun" role="img" aria-label="Мандах нар"></svg></div>
+        <div class="plate-body">
+          <p class="plate-no">ХАВТАН IV</p>
+          <h3>Мандах нар</h3>
+          <p class="plate-en">THE RISING SUN</p>
+          <p>Тэнгэрийн хаяанаас 13 туяа. Хамгийн өөдрөг, хамгийн уншихад хялбар хувилбар &mdash; гэхдээ &laquo;нар&raquo; гэдэг тэмдэг ерөнхийдөө элбэг тул ялгарахын тулд туяаны тоо, зузаанд нь маш нарийн байх шаардлагатай.</p>
+          <p class="src"><b>Үндсэн хуулийн чуулган, 1787.</b> Даргын сандлын араар хагас нар сийлсэн байсныг мандаж буй нар уу, жаргаж буй нар уу гэж хүмүүс маргалддаг байв. Гарын үсэг зурж дуусахад Франклин: <span class="mono">&laquo;энэ бол мандаж буй нар&raquo;</span> гэж хэлсэн гэдэг.</p>
+          <div class="variants">
+            <div class="chip"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="sun" aria-hidden="true"></svg><span>1 өнгө</span></div>
+            <div class="chip solid"><svg class="mark on-solid" viewBox="0 0 200 200" data-mark="sun" aria-hidden="true"></svg><span>урвуу</span></div>
+            <div class="chip tiny"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="sun" aria-hidden="true"></svg><span>20px</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="plate">
+        <div class="plate-stage"><svg class="mark" viewBox="0 0 200 200" data-mark="rosette" role="img" aria-label="Гилош тамга"></svg></div>
+        <div class="plate-body">
+          <p class="plate-no">ХАВТАН V</p>
+          <h3>Гилош тамга</h3>
+          <p class="plate-en">THE GUILLOCHE SEAL</p>
+          <p>Мөнгөн дэвсгэртийн ирмэг дээрх нарийн сүлжсэн шугаман хээ, дунд нь <span class="mono">dG</span> монограмм. Долларын детайлыг хамгийн шууд авсан хувилбар &mdash; санхүү, аудит, итгэлцлийн салбарт хүчтэй ажиллана.</p>
+          <p class="src"><b>Интаглио сийлбэр.</b> Гилош хээг хуурамчлахаас хамгаалах зорилгоор геометрийн машинаар зурдаг. Сул тал: жижигрэхээр шугам нь баларна, тиймээс 24px-ээс доош хэмжээнд зөвхөн дунд монограммыг ашиглана.</p>
+          <div class="variants">
+            <div class="chip"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="rosette" aria-hidden="true"></svg><span>1 өнгө</span></div>
+            <div class="chip solid"><svg class="mark on-solid" viewBox="0 0 200 200" data-mark="rosette" aria-hidden="true"></svg><span>урвуу</span></div>
+            <div class="chip tiny"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="rosette" data-plain="1" aria-hidden="true"></svg><span>20px</span></div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Сонгогдсон тэмдэг</p>
+      <h2>Хавтан I &mdash; хэрэглэх дүрэм</h2>
+      <p class="note">13 холбоос үндсэн тэмдэг боллоо. Доорх гурван бүтэц нь албан ёсны хувилбарууд &mdash; өөр байрлалаар угсрахыг зөвлөхгүй.</p>
+    </div>
+
+    <div class="lockups">
+      <div class="lk">
+        <div class="lk-stage">
+          <div class="lockup-h">
+            <svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg>
+            <span class="wm"><span class="nm">Do<em>Good</em></span><span class="sub">LLC</span></span>
+          </div>
+        </div>
+        <p class="cap">Хэвтээ &middot; үндсэн хувилбар</p>
+      </div>
+      <div class="lk">
+        <div class="lk-stage">
+          <div class="lockup-v">
+            <svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg>
+            <span class="wm"><span class="nm">Do<em>Good</em></span><span class="sub">LLC</span></span>
+          </div>
+        </div>
+        <p class="cap">Босоо &middot; нарийн талбайд</p>
+      </div>
+      <div class="lk">
+        <div class="lk-stage">
+          <svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg>
+        </div>
+        <p class="cap">Зөвхөн тэмдэг &middot; апп, товч, тамга</p>
+      </div>
+    </div>
+
+    <div class="rules">
+      <div class="rule-box">
+        <h3>Чөлөөт зай</h3>
+        <div class="cs-frame">
+          <span class="x x-t">x</span>
+          <span class="x x-l">x</span>
+          <svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg>
+        </div>
+        <p class="note"><b>x = нэг цагирагийн диаметр</b>, өөрөөр хэлбэл тэмдгийн өргөний зургаагийн нэг. Дөрвөн талд нь энэ зайг заавал үлдээнэ &mdash; өөр текст, зураг, ирмэг энэ талбайд орохгүй.</p>
+      </div>
+      <div class="rule-box">
+        <h3>Хамгийн бага хэмжээ</h3>
+        <div class="sizes">
+          <div class="size"><svg class="mark on-paper s48" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg><span>48px</span></div>
+          <div class="size"><svg class="mark on-paper s28" viewBox="0 0 200 200" data-mark="links" data-w="4.4" aria-hidden="true"></svg><span>28px</span></div>
+          <div class="size"><svg class="mark on-paper s20" viewBox="0 0 200 200" data-mark="links" data-w="6" aria-hidden="true"></svg><span>20px &middot; мин.</span></div>
+        </div>
+        <p class="note">Дэлгэцэнд <b>20px</b>, хэвлэлд <b>8мм</b>-ээс жижиг битгий ашигла. 28px-ээс доош хэмжээнд шугамын зузааныг гараар нэмэгдүүлнэ, эс бөгөөс цагирагууд нийлж харагдана.</p>
+      </div>
+    </div>
+
+    <div class="donts">
+      <div class="dont d-stretch">
+        <div class="dont-stage"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg></div>
+        <p class="lbl">&times; Сунгах, шахах</p>
+      </div>
+      <div class="dont d-rot">
+        <div class="dont-stage"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg></div>
+        <p class="lbl">&times; Эргүүлэх</p>
+      </div>
+      <div class="dont d-low">
+        <div class="dont-stage"><svg class="mark" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg></div>
+        <p class="lbl">&times; Ойролцоо өнгө дээр тавих</p>
+      </div>
+      <div class="dont">
+        <div class="dont-stage"><svg class="mark on-paper" viewBox="0 0 200 200" data-mark="links" data-n="9" aria-hidden="true"></svg></div>
+        <p class="lbl">&times; Холбоосын тоог өөрчлөх</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Утга агуулга</p>
+      <h2>Арван гурван зарчим</h2>
+      <p class="note">Мөр бүр дээр хулгана аваачихад тухайн зарчмын цагираг тэмдэг дээр асна. Компанийн үнэт зүйлийн жагсаалт болгож шууд ашиглаж болно.</p>
+    </div>
+    <div class="virtue-grid">
+      <ol class="vlist" id="vlist">
+        <li tabindex="0" data-i="0"><span class="v-no">01</span><span class="v-mn">Цээрлэл</span><span class="v-en">TEMPERANCE &middot; хэтрүүлэн идэж уухгүй</span></li>
+        <li tabindex="0" data-i="1"><span class="v-no">02</span><span class="v-mn">Чимээгүй байх</span><span class="v-en">SILENCE &middot; хэрэгтэй үгээ л хэл</span></li>
+        <li tabindex="0" data-i="2"><span class="v-no">03</span><span class="v-mn">Эмх цэгц</span><span class="v-en">ORDER &middot; бүх зүйл өөрийн байрандаа</span></li>
+        <li tabindex="0" data-i="3"><span class="v-no">04</span><span class="v-mn">Шийдэмгий чанар</span><span class="v-en">RESOLUTION &middot; амласнаа гүйцээ</span></li>
+        <li tabindex="0" data-i="4"><span class="v-no">05</span><span class="v-mn">Хэмнэлт</span><span class="v-en">FRUGALITY &middot; дэмий зардалгүй</span></li>
+        <li tabindex="0" data-i="5"><span class="v-no">06</span><span class="v-mn">Хөдөлмөрч зан</span><span class="v-en">INDUSTRY &middot; цагаа үрэхгүй</span></li>
+        <li tabindex="0" data-i="6"><span class="v-no">07</span><span class="v-mn">Илэн далангүй</span><span class="v-en">SINCERITY &middot; хуурч хохироохгүй</span></li>
+        <li tabindex="0" data-i="7"><span class="v-no">08</span><span class="v-mn">Шударга ёс</span><span class="v-en">JUSTICE &middot; хэнийг ч гэмтээхгүй</span></li>
+        <li tabindex="0" data-i="8"><span class="v-no">09</span><span class="v-mn">Хэмжээ мэдэх</span><span class="v-en">MODERATION &middot; туйлшрахгүй</span></li>
+        <li tabindex="0" data-i="9"><span class="v-no">10</span><span class="v-mn">Цэвэр байдал</span><span class="v-en">CLEANLINESS &middot; бие, хувцас, орчин</span></li>
+        <li tabindex="0" data-i="10"><span class="v-no">11</span><span class="v-mn">Тайван байдал</span><span class="v-en">TRANQUILLITY &middot; өчүүхэн зүйлд бачимдахгүй</span></li>
+        <li tabindex="0" data-i="11"><span class="v-no">12</span><span class="v-mn">Ариун байдал</span><span class="v-en">CHASTITY &middot; хэмжээгээ алдахгүй</span></li>
+        <li tabindex="0" data-i="12"><span class="v-no">13</span><span class="v-mn">Даруу зан</span><span class="v-en">HUMILITY &middot; Сократыг дуурай</span></li>
+      </ol>
+      <aside class="virtue-aside">
+        <div class="stage"><svg class="mark" id="virtueRing" viewBox="0 0 200 200" data-mark="links" role="img" aria-label="13 холбоос: зарчим тус бүр нэг цагираг"></svg></div>
+        <p class="note" style="font-size:13px">13 гэдэг тоо давхар утгатай: Франклины 13 зарчим, мөн анхны 13 колони. Fugio зоос дээрх 13 цагираг ч яг тэр тоо.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Өнгөний систем</p>
+      <h2>Долларын ногоон, гарал үүслээрээ</h2>
+      <p class="note">Бүх өнгө мөнгөн дэвсгэртийн бодит детайлаас авагдсан &mdash; таамгаар сонгосон өнгө байхгүй.</p>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#6E9F4E;color:#0E1A14">
+        <b>Greenback</b>
+        <span class="hex">#6E9F4E</span>
+        <span class="use">1861 оноос хойш мөнгөн дэвсгэртийн ард талыг ногоон бэхээр хэвлэсээр ирсэн &mdash; &laquo;greenback&raquo; нэр тэндээс. Үндсэн онцлох өнгө.</span>
+      </div>
+      <div class="sw" style="background:#2C6A4C;color:#EDEEE4">
+        <b>Seal Green</b>
+        <span class="hex">#2C6A4C</span>
+        <span class="use">Сангийн яамны тамганы гүн ногоон. Толгой хэсэг, товч, тамганд.</span>
+      </div>
+      <div class="sw" style="background:#12201A;color:#EDEEE4">
+        <b>Engraving Ink</b>
+        <span class="hex">#12201A</span>
+        <span class="use">Интаглио сийлбэрийн бараан бэх &mdash; цэвэр хар биш, ногоон хазайлттай. Бүх текст.</span>
+      </div>
+      <div class="sw" style="background:#EDEEE4;color:#12201A;box-shadow:inset 0 0 0 1px #C6CCBB">
+        <b>Cotton Paper</b>
+        <span class="hex">#EDEEE4</span>
+        <span class="use">75% хөвөн, 25% маалинган цаасны өнгө. Цагаан биш &mdash; арай дулаан, ногоон хазайлттай дэвсгэр.</span>
+      </div>
+      <div class="sw" style="background:#2B4C8F;color:#EDEEE4">
+        <b>Ribbon Blue</b>
+        <span class="hex">#2B4C8F</span>
+        <span class="use">Шинэ 100 долларын хамгаалалтын хөх тууз. Хоёрдогч өнгө: холбоос, идэвхтэй төлөв.</span>
+      </div>
+      <div class="sw" style="background:#A9662F;color:#EDEEE4">
+        <b>Bell Copper</b>
+        <span class="hex">#A9662F</span>
+        <span class="use">Бэхний савны дотор өнгө хувирдаг хонхны зэс. Зөвхөн анхаарал татах өчүүхэн детайлд.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Үсгийн сонголт</p>
+      <h2>Хоёулаа Франклины нэртэй холбоотой</h2>
+    </div>
+    <div class="type-rows">
+      <div class="type-row">
+        <div class="spec">
+          <b>Libre Caslon Display</b>
+          <span class="mono">Гарчиг &middot; 400</span>
+          <p>Франклин өөрийн хэвлэлийн газартаа Caslon үсгийг голчлон хэрэглэдэг байсан. Тусгаар тогтнолын тунхаглалын анхны хэвлэл ч Caslon-оор гарсан.</p>
+        </div>
+        <div>
+          <p class="samp-display">Өнөөдөр ямар сайныг бүтээх вэ?</p>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="spec">
+          <b>Libre Franklin</b>
+          <span class="mono">Үндсэн текст &middot; 400/600/700</span>
+          <p>1902 онд ATF-ийн гаргасан Franklin Gothic-ийн орчин үеийн хувилбар &mdash; тэр үсэг нь Бенжамин Франклины нэрээр нэрлэгдсэн юм.</p>
+        </div>
+        <div>
+          <p class="samp-body"><span class="lg">DoGood ХХК &mdash; 13 зарчим</span>Гүйцэтгэлийн тайлан, гэрээний хяналт, дотоод аудит. Хэрэглэгч бүрт эмх цэгц, шударга тооцоо. Абвгд ЕЁЖЗ 0123456789 &#8366; $</p>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="spec">
+          <b>Courier Prime</b>
+          <span class="mono">Тоо, код &middot; 400</span>
+          <p>Гэрээ, дугаар, огноонд. Хуучин бичгийн машины мэдрэмж нь баримт бичгийн шинжийг өгнө.</p>
+        </div>
+        <div>
+          <p class="samp-mono">ГЭРЭЭ &#8470; 2026-0417 &middot; 25.08.2026 &middot; $4,820.00 &middot; 13/13 ЗАРЧИМ БҮРЭН</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Хэрэглээ</p>
+      <h2>Бодит гадаргуу дээр</h2>
+    </div>
+    <div class="apps">
+      <div class="app">
+        <div class="card">
+          <svg class="mark" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg>
+          <div>
+            <p class="nm">DoGood LLC</p>
+            <p class="dt">Гүйцэтгэх захирал<br>+976 9911 0000 &middot; dogood.mn</p>
+          </div>
+        </div>
+        <p class="cap">Нэрийн хуудас &middot; 90 &times; 50 мм</p>
+      </div>
+      <div class="app">
+        <div class="card green">
+          <svg class="mark on-solid" viewBox="0 0 200 200" data-mark="grid" data-compact="1" aria-hidden="true"></svg>
+          <div>
+            <p class="nm">Өнөөдөр ямар<br>сайныг бүтээх вэ?</p>
+          </div>
+        </div>
+        <p class="cap">Урвуу хувилбар &middot; хавтас, уут</p>
+      </div>
+      <div class="app">
+        <div class="stamp">
+          <svg class="mark on-paper" viewBox="0 0 200 200" data-mark="rosette" aria-hidden="true"></svg>
+          <span class="ovl">БАТАЛГААЖУУЛСАН</span>
+        </div>
+        <p class="cap">Баримт бичгийн тамга</p>
+      </div>
+      <div class="app">
+        <div class="icons">
+          <div class="box b1"><svg class="mark" viewBox="0 0 200 200" data-mark="links" aria-hidden="true"></svg></div>
+          <div class="box b2"><svg class="mark" viewBox="0 0 200 200" data-mark="links" data-w="5" aria-hidden="true"></svg></div>
+          <div class="box b3"><svg class="mark" viewBox="0 0 200 200" data-mark="links" data-w="7" aria-hidden="true"></svg></div>
+        </div>
+        <p class="cap">Апп дүрс &middot; 64 / 36 / 20 px</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Дүгнэлт</p>
+      <h2>Юуг сонгох вэ</h2>
+    </div>
+    <div class="rec">
+      <div class="rec-card">
+        <h3>Сонгосон систем</h3>
+        <ul>
+          <li><b>Хавтан I &mdash; 13 холбоос</b> үндсэн тэмдэг боллоо. Хамгийн олон утга агуулж байгаа бөгөөд дугуй хэлбэр нь ямар ч хэмжээнд, ямар ч дэвсгэр дээр ажиллана.</li>
+          <li><b>Хавтан II &mdash; буянны хуудас</b> нь лого биш, давтагдах хэв маяг болж системийг тэлнэ.</li>
+          <li><b>Хавтан V &mdash; гилош</b> зөвхөн тамга, гэрчилгээ зэрэг албан ёсны баримт дээр.</li>
+          <li>Өнгө: <b>Greenback</b> онцлох, <b>Engraving Ink</b> текст, <b>Cotton Paper</b> дэвсгэр.</li>
+        </ul>
+      </div>
+      <div class="rec-card">
+        <h3>Анхаарах зүйлс</h3>
+        <ul>
+          <li><b>Нэр давхцах эрсдэл.</b> &laquo;DoGood&raquo; нэртэй компани гадаадад хэд хэд бий. Оюуны өмчийн газарт болон домэйн (dogood.mn) шалгуулаад эхлэх нь зүйтэй.</li>
+          <li><b>Тэмдэг нь ялгаа гаргана.</b> Нэр нь ерөнхий байх тусам график тэмдэг нь өвөрмөц байх шаардлагатай &mdash; тиймээс 13 холбоосыг санал болгож байна.</li>
+          <li><b>Долларын дүрсийг шууд бүү аваарай.</b> Улсын мөнгөн тэмдэгтийн элементийг хуулбарлах нь зарим оронд хязгаарлагдмал. Бид зөвхөн өнгө, сийлбэрийн арга барилыг л авсан.</li>
+          <li><b>Дараагийн алхам:</b> тэмдэг сонгогдсон тул одоо SVG/PNG/ICO файлын багц, хар&ndash;цагаан хувилбар, нэрийн хуудас, бланкны эх бэлтгэнэ.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap"><p>DoGood LLC &middot; брэндийн тэмдгийн санал &middot; 2026.08.25 &middot; таван концепт, нэг өнгөний систем</p></div>
+</footer>
+
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  function el(n,a){var e=document.createElementNS(NS,n);for(var k in a){e.setAttribute(k,a[k]);}return e;}
+
+  var builders={
+    links:function(svg){
+      var w=parseFloat(svg.getAttribute("data-w")||"3.2"),R=58,n=parseInt(svg.getAttribute("data-n")||"13",10);
+      var r=R*Math.sin(Math.PI/n)*1.225;
+      for(var i=0;i<n;i++){
+        var a=(i*(360/n)-90)*Math.PI/180;
+        var c=el("circle",{cx:(100+R*Math.cos(a)).toFixed(2),cy:(100+R*Math.sin(a)).toFixed(2),r:r,"class":"ring","stroke-width":w});
+        c.setAttribute("data-i",i);
+        svg.appendChild(c);
+      }
+    },
+    grid:function(svg){
+      var compact=svg.getAttribute("data-compact")==="1";
+      var cols=7,rows=compact?7:13,sp=14,r=3.4;
+      var ox=(200-(cols-1)*sp)/2, oy=(200-(rows-1)*sp)/2;
+      for(var y=0;y<rows;y++){
+        for(var x=0;x<cols;x++){
+          var on=(x===y%cols);
+          svg.appendChild(el("circle",{cx:ox+x*sp,cy:oy+y*sp,r:on?r:r*0.6,"class":on?"dot on":"dot"}));
+        }
+      }
+    },
+    sun:function(svg){
+      var cx=100,cy=134,n=13;
+      for(var i=0;i<n;i++){
+        var d=(15+i*(150/(n-1)))*Math.PI/180;
+        svg.appendChild(el("line",{
+          x1:(cx+38*Math.cos(d)).toFixed(2),y1:(cy-38*Math.sin(d)).toFixed(2),
+          x2:(cx+66*Math.cos(d)).toFixed(2),y2:(cy-66*Math.sin(d)).toFixed(2),
+          "class":"ray"
+        }));
+      }
+      svg.appendChild(el("path",{d:"M "+(cx-30)+" "+cy+" A 30 30 0 0 1 "+(cx+30)+" "+cy+" Z","class":"disc"}));
+      svg.appendChild(el("line",{x1:26,y1:cy,x2:174,y2:cy,"class":"horizon"}));
+    },
+    lens:function(svg){
+      svg.appendChild(el("path",{d:"M100 71.38 A38 38 0 0 1 100 128.62 A38 38 0 0 1 100 71.38 Z","class":"vesica"}));
+      svg.appendChild(el("circle",{cx:75,cy:100,r:38,"class":"lens"}));
+      svg.appendChild(el("circle",{cx:125,cy:100,r:38,"class":"lens"}));
+      svg.appendChild(el("line",{x1:39.3,y1:113,x2:110.7,y2:113,"class":"seg"}));
+      svg.appendChild(el("line",{x1:89.3,y1:113,x2:160.7,y2:113,"class":"seg"}));
+    },
+    rosette:function(svg){
+      if(svg.getAttribute("data-plain")!=="1"){
+        var g=el("g",{"class":"rose"}),n=26;
+        for(var i=0;i<n;i++){
+          g.appendChild(el("ellipse",{cx:100,cy:100,rx:78,ry:30,transform:"rotate("+(i*180/n).toFixed(2)+" 100 100)"}));
+        }
+        svg.appendChild(g);
+        svg.appendChild(el("circle",{cx:100,cy:100,r:46,"class":"core"}));
+      }
+      var t=el("text",{x:100,y:118,"class":"monogram"});
+      t.textContent="dG";
+      svg.appendChild(t);
+    }
+  };
+
+  var marks=document.querySelectorAll(".mark[data-mark]");
+  for(var i=0;i<marks.length;i++){
+    var b=builders[marks[i].getAttribute("data-mark")];
+    if(b){b(marks[i]);}
+  }
+
+  /* virtue list <-> ring */
+  var ring=document.getElementById("virtueRing");
+  var list=document.getElementById("vlist");
+  if(ring&&list){
+    var rings=ring.querySelectorAll(".ring");
+    var light=function(i){
+      for(var k=0;k<rings.length;k++){rings[k].classList.toggle("is-on",k===i);}
+    };
+    var clear=function(){light(-1);};
+    var items=list.querySelectorAll("li");
+    for(var j=0;j<items.length;j++){
+      (function(li){
+        var idx=parseInt(li.getAttribute("data-i"),10);
+        li.addEventListener("mouseenter",function(){light(idx);});
+        li.addEventListener("focus",function(){light(idx);});
+        li.addEventListener("blur",clear);
+      })(items[j]);
+    }
+    list.addEventListener("mouseleave",clear);
+  }
+
+  /* hero guilloche */
+  var cv=document.getElementById("guilloche");
+  if(cv&&cv.getContext){
+    var ctx=cv.getContext("2d");
+    var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var passes=34,drawn=0,raf=null,dim=null;
+
+    var setup=function(){
+      var dpr=Math.min(window.devicePixelRatio||1,2);
+      var w=cv.clientWidth,h=cv.clientHeight;
+      cv.width=Math.max(1,Math.round(w*dpr));cv.height=Math.max(1,Math.round(h*dpr));
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.clearRect(0,0,w,h);
+      return {w:w,h:h};
+    };
+    var pass=function(d,p){
+      var cx=d.w*0.76,cy=d.h*0.5;
+      var R=Math.min(d.w,d.h)*0.46;
+      var A=R,B=R*0.34,f=7,phase=p*0.055;
+      ctx.beginPath();
+      for(var t=0;t<=Math.PI*2+0.02;t+=0.012){
+        var x=cx+A*Math.cos(t+phase)+B*Math.cos(f*t+phase*2);
+        var y=cy+A*Math.sin(t+phase)-B*Math.sin(f*t+phase*2);
+        if(t===0){ctx.moveTo(x,y);}else{ctx.lineTo(x,y);}
+      }
+      ctx.strokeStyle="rgba(110,159,78,0.40)";
+      ctx.lineWidth=0.7;
+      ctx.stroke();
+    };
+    var run=function(){
+      dim=setup();drawn=0;
+      if(reduce){for(var p=0;p<passes;p++){pass(dim,p);}return;}
+      if(raf){cancelAnimationFrame(raf);}
+      (function step(){
+        for(var k=0;k<2&&drawn<passes;k++){pass(dim,drawn++);}
+        if(drawn<passes){raf=requestAnimationFrame(step);}
+      })();
+    };
+    run();
+    var tid=null;
+    window.addEventListener("resize",function(){
+      clearTimeout(tid);tid=setTimeout(run,180);
+    });
+  }
+})();
+</script>
