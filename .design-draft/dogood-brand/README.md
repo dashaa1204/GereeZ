@@ -39,7 +39,9 @@ SVG-үүдийн `viewBox` нь зургийн ирмэг дээр яг таар
 
 1. [Libre Caslon Display](https://fonts.google.com/specimen/Libre+Caslon+Display) болон [Libre Franklin](https://fonts.google.com/specimen/Libre+Franklin)-г суулгана.
 2. Файлыг Figma / Illustrator / Inkscape дээр нээнэ.
-3. Текстийг **outline / curves болгож хөрвүүлнэ** (Figma: `Ctrl+Shift+O`).
+3. Текстийг **outline / curves болгож хөрвүүлнэ** — Figma дээр *Flatten* (`Ctrl/Cmd + E`), Illustrator дээр *Create Outlines* (`Ctrl/Cmd + Shift + O`).
+
+> Figma-гийн `Ctrl+Shift+O` бол **Outline stroke** — өөр үйлдэл. Тэр нь шугамыг (stroke) дүүргэлт (fill) болгодог, текст хөрвүүлдэггүй. Дэлгэрэнгүйг [FIGMA.md](FIGMA.md)-аас үзнэ үү.
 
 Зөвхөн тэмдгийн файлууд (`mark-*.svg`, `app-icon.svg`, бүх PNG) нь цэвэр геометр учир энэ асуудалгүй, шууд ашиглаж болно.
 
