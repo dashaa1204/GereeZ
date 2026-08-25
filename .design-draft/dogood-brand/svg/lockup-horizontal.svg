@@ -14,6 +14,7 @@
     <circle cx="30.774" cy="46.022" r="17.535"/>
     <circle cx="52.203" cy="27.037" r="17.535"/>
   </g>
-  <text x="196" y="94" font-family="'Libre Caslon Display', Georgia, 'Times New Roman', serif" font-size="80" fill="#12201A">Do<tspan fill="#2C6A4C">Good</tspan></text>
+  <text x="196.000" y="94" font-family="'Libre Caslon Display', Georgia, 'Times New Roman', serif" font-size="80" fill="#12201A">Do</text>
+  <text x="288.720" y="94" font-family="'Libre Caslon Display', Georgia, 'Times New Roman', serif" font-size="80" fill="#2C6A4C">Good</text>
   <text x="200" y="126" font-family="'Libre Franklin', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" letter-spacing="5.5" fill="#12201A" opacity="0.62">LLC</text>
 </svg>

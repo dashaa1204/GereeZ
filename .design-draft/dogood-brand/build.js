@@ -83,13 +83,34 @@ function markSVG({ color, weight = "standard", bg = null, inset = 1, px = null }
 const FACE = "'Libre Caslon Display', Georgia, 'Times New Roman', serif";
 const UI = "'Libre Franklin', Helvetica, Arial, sans-serif";
 
+/* Advance widths measured from Libre Caslon Display at 80px via canvas
+   measureText. "Do" is not used directly: the offset comes out of the full
+   string so the o-G kerning pair (-0.8 at 80px) survives. */
+const METRICS = { at: 80, DoGood: 262.88, Good: 170.16 };
+const wordWidth = (word, size) => (METRICS[word] * size) / METRICS.at;
+const goodOffset = (size) => wordWidth("DoGood", size) - wordWidth("Good", size);
+
+/* The two words are emitted as separate <text> elements rather than one
+   element with a coloured tspan. A tspan imports into Figma as a single
+   text layer carrying two fills, and flattening that layer collapses it to
+   one colour -- the green is silently lost. Two elements import as two
+   layers, so each flattens on its own. */
+function wordmark(x, baseline, size) {
+  return (
+    `  <text x="${x.toFixed(3)}" y="${baseline}" font-family="${FACE}" font-size="${size}" fill="${C.ink}">Do</text>\n` +
+    `  <text x="${(x + goodOffset(size)).toFixed(
+      3
+    )}" y="${baseline}" font-family="${FACE}" font-size="${size}" fill="${C.seal}">Good</text>`
+  );
+}
+
 function lockupHorizontal() {
   const r = rings(WEIGHT.standard);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" role="img" aria-label="DoGood LLC">
   <g fill="none" stroke="${C.ink}" stroke-width="${r.sw.toFixed(3)}">
 ${r.paths}
   </g>
-  <text x="196" y="94" font-family="${FACE}" font-size="80" fill="${C.ink}">Do<tspan fill="${C.seal}">Good</tspan></text>
+${wordmark(196, 94, 80)}
   <text x="200" y="126" font-family="${UI}" font-size="17" font-weight="600" letter-spacing="5.5" fill="${C.ink}" opacity="0.62">LLC</text>
 </svg>
 `;
@@ -97,11 +118,13 @@ ${r.paths}
 
 function lockupVertical() {
   const r = rings(WEIGHT.standard);
+  const size = 76;
+  const x0 = 180 - wordWidth("DoGood", size) / 2;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 290" role="img" aria-label="DoGood LLC">
   <g transform="translate(100 0)" fill="none" stroke="${C.ink}" stroke-width="${r.sw.toFixed(3)}">
 ${r.paths}
   </g>
-  <text x="180" y="236" text-anchor="middle" font-family="${FACE}" font-size="76" fill="${C.ink}">Do<tspan fill="${C.seal}">Good</tspan></text>
+${wordmark(x0, 236, size)}
   <text x="180" y="266" text-anchor="middle" font-family="${UI}" font-size="16" font-weight="600" letter-spacing="5.5" fill="${C.ink}" opacity="0.62">LLC</text>
 </svg>
 `;
