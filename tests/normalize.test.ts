@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeComplianceScore,
+  groundCitations,
   normalizeAuditResult,
 } from "@/lib/audit/normalize";
 import type { AuditResultSchema } from "@/lib/audit/schema";
@@ -208,5 +209,43 @@ describe("normalizeAuditResult — metadata", () => {
     expect(withNotice(30)).toBe(30);
     expect(withNotice(365)).toBeNull(); // a one-year term, not a notice period
     expect(withNotice(0)).toBeNull();
+  });
+});
+
+describe("groundCitations", () => {
+  it("keeps a citation the retrieval step supplied", () => {
+    const alerts = [makeAlert({ articleReference: "295 дүгээр зүйл" })];
+    const [grounded] = groundCitations(alerts, new Set(["295"]));
+
+    expect(grounded.articleReference).toBe("295 дүгээр зүйл");
+    expect(grounded.confidence).toBeUndefined();
+  });
+
+  it("matches a sub-article citation against its parent article", () => {
+    const alerts = [makeAlert({ articleReference: "289.2.5 дугаар зүйл" })];
+    const [grounded] = groundCitations(alerts, new Set(["289"]));
+
+    expect(grounded.articleReference).toBe("289.2.5 дугаар зүйл");
+  });
+
+  it("strips a citation to an article nobody retrieved", () => {
+    const alerts = [
+      makeAlert({ articleReference: "299 дүгээр зүйл", confidence: "high" }),
+    ];
+    const [grounded] = groundCitations(alerts, new Set(["287", "295"]));
+
+    expect(grounded.articleReference).toBe("");
+    expect(grounded.confidence).toBe("low");
+    // the finding itself survives — only its unsourced reference is dropped
+    expect(grounded.title).toBe(alerts[0].title);
+    expect(grounded.severity).toBe(alerts[0].severity);
+  });
+
+  it("leaves an already-uncited finding alone", () => {
+    const alerts = [makeAlert({ articleReference: "", confidence: "medium" })];
+    const [grounded] = groundCitations(alerts, new Set(["295"]));
+
+    expect(grounded.articleReference).toBe("");
+    expect(grounded.confidence).toBe("medium");
   });
 });

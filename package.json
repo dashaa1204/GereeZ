@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "seed:demo": "node ./node_modules/tsx/dist/cli.mjs --env-file=.env.local scripts/seed-demo.ts",
+    "trace:audit": "node ./node_modules/tsx/dist/cli.mjs --env-file=.env.local scripts/trace-audit.ts",
     "ingest:legal": "node --max-old-space-size=4096 ./node_modules/tsx/dist/cli.mjs --env-file=.env.local scripts/ingest-legal.ts"
   },
   "dependencies": {

@@ -68,17 +68,26 @@ describe("LAW_NAME_BY_CONTRACT_TYPE", () => {
 describe("buildContractSearchQueries", () => {
   it("builds rental-flavored queries by default", () => {
     const queries = buildContractSearchQueries(RENTAL_CONTRACT);
-    expect(queries).toHaveLength(3);
     expect(queries.join(" ")).toContain("Түрээсийн гэрээ");
     expect(queries.join(" ")).toContain("Иргэний хууль");
   });
 
   it("builds employment-flavored queries for employment contracts", () => {
     const queries = buildContractSearchQueries(EMPLOYMENT_CONTRACT, "employment");
-    expect(queries).toHaveLength(3);
     const joined = queries.join(" ");
     expect(joined).toContain("Хөдөлмөрийн гэрээ");
     expect(joined).toContain("Хөдөлмөрийн тухай хууль");
     expect(joined).not.toContain("Түрээсийн гэрээ");
+  });
+
+  it("leads with the contract's own text, then asks each topic separately", () => {
+    const queries = buildContractSearchQueries(RENTAL_CONTRACT);
+
+    // A blended topic query returns the lease chapter for every topic at once,
+    // so each dispute area gets its own query and its own retrieval slots.
+    expect(queries.length).toBeGreaterThan(3);
+    expect(queries[0]).toContain(RENTAL_CONTRACT.slice(0, 40));
+    expect(queries.some((q) => q.includes("Дэнчин"))).toBe(true);
+    expect(queries.some((q) => q.includes("анз"))).toBe(true);
   });
 });

@@ -34,7 +34,7 @@ export function HowItWorks() {
             Хэрхэн ажилладаг вэ
           </Eyebrow>
           <h2 className="mt-4 text-3xl leading-tight font-bold tracking-tight text-balance text-foreground sm:text-4xl">
-            Гурван алхам. Хуульчид очих шаардлагагүй.
+            Гурван алхам. Хуульчид очихоосоо өмнө.
           </h2>
         </div>
 

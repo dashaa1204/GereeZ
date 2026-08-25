@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8" />
+<title>Түрээсийн үр дүн — draft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fg:oklch(0.145 0 0);--border:oklch(0.922 0 0);--border-soft:oklch(0.945 0 0);
+  --muted:oklch(0.556 0 0);--muted-bg:oklch(0.975 0 0);
+  --brand:oklch(0.53 0.145 163);--panel:oklch(0.16 0.008 260);
+  --high:oklch(0.577 0.21 27);--high-ink:oklch(0.505 0.19 27);
+  --med:oklch(0.72 0.17 55);--med-ink:oklch(0.53 0.13 58);
+  --low:oklch(0.62 0.12 250);--low-ink:oklch(0.51 0.11 254);
+  --ok:oklch(0.62 0.19 145);--ok-ink:oklch(0.48 0.13 150);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,-apple-system,"Segoe UI",system-ui,sans-serif;color:var(--fg);
+     background:oklch(0.965 0.003 260);-webkit-font-smoothing:antialiased;padding:16px;width:800px}
+svg{display:block}
+button{font:inherit;color:inherit;background:none;border:none;text-align:left}
+.mono{font-family:"JetBrains Mono",monospace}
+
+.lab{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+     color:var(--muted);margin:22px 0 9px;display:flex;align-items:center;gap:8px}
+.lab:first-child{margin-top:0}
+.lab i{width:19px;height:19px;border-radius:6px;background:var(--panel);color:#fff;
+       display:grid;place-items:center;font-size:10.5px;font-style:normal;font-weight:700}
+.lab em{font-style:normal;font-weight:500;text-transform:none;letter-spacing:0;font-size:11.5px;color:oklch(0.66 0 0)}
+.board{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden}
+
+/* ═══ A. action column, two states ═══ */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.actcol{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px;position:relative}
+.actcol.hi{border-color:color-mix(in oklch,var(--brand) 32%,white);
+           background:linear-gradient(180deg,#fff,color-mix(in oklch,var(--brand) 4%,white))}
+.state{display:flex;gap:4px;background:var(--muted-bg);border:1px solid var(--border-soft);
+       border-radius:9px;padding:3px;margin-bottom:14px}
+.state span{flex:1;text-align:center;font-size:11.5px;font-weight:600;color:var(--muted);padding:5px 4px;border-radius:7px}
+.state span.on{background:#fff;color:var(--fg);box-shadow:0 1px 3px oklch(0 0 0/.08)}
+.qlab{font-size:11px;color:var(--muted);margin-bottom:7px}
+.acthead{font-size:13px;font-weight:680;letter-spacing:-.01em;margin-bottom:4px}
+.actsub{font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:13px}
+.cta{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--panel);
+     color:#fff;border-radius:11px;padding:12px 14px;font-size:13.2px;font-weight:600;letter-spacing:-.01em;
+     box-shadow:0 2px 8px oklch(0 0 0/.15);text-align:center}
+.cta.alt{background:#fff;color:var(--fg);border:1px solid var(--border);box-shadow:none}
+.why{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--ok-ink);
+     margin-top:9px;font-weight:550}
+.second{margin-top:13px;padding-top:12px;border-top:1px solid var(--border-soft)}
+.secbtn{width:100%;display:flex;align-items:center;gap:8px;font-size:12.2px;color:var(--muted);font-weight:550}
+.secbtn .arr{margin-left:auto}
+.secnote{font-size:10.8px;color:oklch(0.68 0 0);line-height:1.5;margin-top:6px;padding-left:22px}
+
+/* ═══ B. finding row ═══ */
+.find{background:#fff;border:1px solid oklch(0.885 0 0);border-radius:15px;position:relative;
+      overflow:hidden;box-shadow:0 3px 14px oklch(0 0 0/.055)}
+.find .rail{position:absolute;inset:0 auto 0 0;width:3px;background:var(--high)}
+.fhead{display:flex;align-items:flex-start;gap:12px;padding:15px 16px 15px 21px}
+.fmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sevpill{display:inline-flex;align-items:center;gap:5px;border-radius:7px;padding:3px 8px;
+         font-size:10.2px;font-weight:700;letter-spacing:.075em;text-transform:uppercase;
+         background:color-mix(in oklch,var(--high) 11%,white);color:var(--high-ink)}
+.clauseref{font-size:11.5px;color:var(--muted)}
+.impact{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+        color:var(--high-ink);background:color-mix(in oklch,var(--high) 8%,white);
+        border:1px solid color-mix(in oklch,var(--high) 20%,white);border-radius:7px;padding:3px 8px}
+.ftitle{font-size:14.8px;font-weight:640;letter-spacing:-.014em;line-height:1.35;margin-top:9px}
+.chev{color:var(--muted);flex-shrink:0;margin-top:2px}
+.fbody{padding:0 18px 17px 21px}
+.blk{border-top:1px solid var(--border-soft);padding-top:14px;margin-top:3px}
+.blk + .blk{margin-top:14px}
+.blk h4{font-size:10.5px;font-weight:700;letter-spacing:.085em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.blk > p{font-size:13.4px;line-height:1.64;color:oklch(0.32 0 0)}
+.lawbox{border:1px solid var(--border);background:var(--muted-bg);border-radius:10px;padding:10px 12px;
+        display:flex;align-items:center;gap:9px}
+.lawbox .t{font-size:12.4px;font-weight:570;flex:1}
+.lawbox .op{font-size:11.2px;color:var(--brand);font-weight:600;display:flex;align-items:center;gap:4px}
+
+/* two lanes */
+.lanes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lane{border-radius:11px;padding:12px 13px;border:1px solid}
+.lane.weak{border-color:var(--border);background:var(--muted-bg)}
+.lane.strong{border-color:color-mix(in oklch,var(--brand) 26%,white);
+             background:color-mix(in oklch,var(--brand) 5%,white)}
+.lanehead{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.lanehead .n{width:17px;height:17px;border-radius:5px;display:grid;place-items:center;
+             font-size:10px;font-weight:700;flex-shrink:0}
+.lane.weak .n{background:oklch(0.9 0 0);color:var(--muted)}
+.lane.strong .n{background:var(--brand);color:#fff}
+.lanehead h5{font-size:11.8px;font-weight:680;letter-spacing:-.005em}
+.lane.weak h5{color:var(--muted)}
+.lane p{font-size:12.4px;line-height:1.58;color:oklch(0.34 0 0)}
+.lane.weak p{color:var(--muted)}
+.tag{display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;
+     background:oklch(0.93 0 0);color:var(--muted);margin-top:8px}
+.acts{list-style:none;display:flex;flex-direction:column;gap:7px}
+.acts li{display:flex;gap:8px;font-size:12.4px;line-height:1.5;color:oklch(0.28 0 0)}
+.acts svg{color:var(--brand);flex-shrink:0;margin-top:2px}
+.proof{display:flex;gap:8px;margin-top:11px;padding-top:10px;border-top:1px solid color-mix(in oklch,var(--brand) 18%,white)}
+.proof svg{color:var(--brand);flex-shrink:0;margin-top:1px}
+.proof p{font-size:11.5px;line-height:1.55;color:var(--ok-ink);font-weight:500}
+
+/* ═══ C. checklist deliverable ═══ */
+.cl-head{padding:18px 20px;border-bottom:1px solid var(--border-soft);display:flex;align-items:flex-start;gap:14px}
+.cl-head h2{font-size:17px;font-weight:700;letter-spacing:-.02em}
+.cl-head p{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:5px;max-width:58ch}
+.cl-head .ic{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;
+             background:color-mix(in oklch,var(--brand) 10%,white);color:var(--brand)}
+.cl-acts{margin-left:auto;display:flex;gap:7px;flex-shrink:0}
+.gbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:9px;
+      padding:8px 12px;font-size:12.2px;font-weight:550;color:var(--fg)}
+.gbtn.dark{background:var(--panel);color:#fff;border-color:var(--panel)}
+.gbtn svg{color:currentColor;opacity:.7}
+.grp{display:grid;grid-template-columns:150px 1fr;border-bottom:1px solid var(--border-soft)}
+.grp:last-child{border:none}
+.gwhen{padding:15px 16px 15px 20px;border-right:1px solid var(--border-soft);background:oklch(0.988 0 0)}
+.gwhen h3{font-size:12.5px;font-weight:680;letter-spacing:-.01em}
+.gwhen span{display:block;font-size:10.8px;color:var(--muted);margin-top:4px;line-height:1.45}
+.items{padding:9px 18px 11px}
+.item{display:flex;gap:10px;padding:7px 0}
+.box{width:17px;height:17px;border-radius:5px;border:1.5px solid oklch(0.83 0 0);flex-shrink:0;margin-top:1px;
+     display:grid;place-items:center;color:#fff}
+.box.on{background:var(--ok);border-color:var(--ok)}
+.item .txt{font-size:12.8px;line-height:1.5;color:oklch(0.26 0 0)}
+.item .txt b{font-weight:640}
+.item .why2{display:block;font-size:11.2px;color:var(--muted);margin-top:3px;line-height:1.45}
+.ref{display:inline-flex;align-items:center;font-size:9.8px;font-weight:650;padding:1.5px 5px;border-radius:4px;
+     background:color-mix(in oklch,var(--high) 10%,white);color:var(--high-ink);margin-left:6px;vertical-align:1px}
+.ref.med{background:color-mix(in oklch,var(--med) 14%,white);color:var(--med-ink)}
+.ref.low{background:color-mix(in oklch,var(--low) 10%,white);color:var(--low-ink)}
+.cl-foot{padding:13px 20px;background:oklch(0.985 0 0);border-top:1px solid var(--border-soft);
+         display:flex;align-items:center;gap:9px}
+.cl-foot svg{color:var(--ok);flex-shrink:0}
+.cl-foot p{font-size:12px;color:oklch(0.35 0 0);line-height:1.5}
+.cl-foot b{font-weight:650}
+
+/* ═══ D. notes ═══ */
+.notes{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px 20px}
+.notes h2{font-size:15px;font-weight:700;letter-spacing:-.015em;margin-bottom:3px}
+.notes .lede{font-size:12.2px;color:var(--muted);line-height:1.55;margin-bottom:14px}
+.ncols{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.note{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--border-soft)}
+.note .idx{width:19px;height:19px;border-radius:6px;flex-shrink:0;display:grid;place-items:center;
+           font-size:10px;font-weight:700;background:color-mix(in oklch,var(--brand) 11%,white);color:var(--brand)}
+.note h4{font-size:12.5px;font-weight:650;letter-spacing:-.01em;margin-bottom:3px}
+.note p{font-size:11.6px;line-height:1.55;color:var(--muted)}
+.warn{margin-top:14px;border:1px solid color-mix(in oklch,var(--med) 30%,white);
+      background:color-mix(in oklch,var(--med) 7%,white);border-radius:11px;padding:12px 14px;display:flex;gap:10px}
+.warn svg{color:var(--med-ink);flex-shrink:0;margin-top:1px}
+.warn p{font-size:12px;line-height:1.58;color:oklch(0.3 0 0)}
+.warn b{font-weight:650}
+</style>
+</head>
+<body>
+
+<!-- ══════ A ══════ -->
+<div class="lab"><i>A</i> Hero-ийн үйлдлийн багана — <em>гарын үсгийн төлвөөс хамаарч сольж байна</em></div>
+<div class="pair">
+
+  <div class="actcol">
+    <div class="qlab">Та энэ гэрээнд гарын үсэг зурсан уу?</div>
+    <div class="state"><span class="on">Хараахан үгүй</span><span>Зурсан</span></div>
+    <div class="acthead">Зурахаас өмнө</div>
+    <div class="actsub">Хамгийн ноцтой 2 заалтыг амаар асууж тодруулаад, хариултаас нь хамаарч шийдвэрээ гаргана.</div>
+    <button class="cta">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0-6.9-3.96L4 20l3.96-1.1A8 8 0 0 0 12 20"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+      Асуух 3 асуулт
+    </button>
+    <div class="why">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      Мөргөлдөөнгүй — шаардлага биш, асуулт
+    </div>
+    <div class="second">
+      <button class="secbtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+        Албан захидал үүсгэх
+        <span class="arr"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+      </button>
+      <div class="secnote">Түрээслүүлэгч хэлэлцэхэд нээлттэй бол. Түрээсийн зах зээлд ховор.</div>
+    </div>
+  </div>
+
+  <div class="actcol hi">
+    <div class="qlab">Та энэ гэрээнд гарын үсэг зурсан уу?</div>
+    <div class="state"><span>Хараахан үгүй</span><span class="on">Зурсан</span></div>
+    <div class="acthead">Заалтыг устгаж чадахгүй — ажиллах боломжгүй болго</div>
+    <div class="actsub">Түрээслүүлэгчийн зөвшөөрөл шаардахгүй 9 алхам. Барьцааны эрсдэлийг нотолгоогоор хаана.</div>
+    <button class="cta">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+      Өөрийгөө хамгаалах алхмууд
+    </button>
+    <div class="why">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      Хэний ч зөвшөөрөл шаардахгүй
+    </div>
+    <div class="second">
+      <button class="secbtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+        Сануулга болгож нэмэх
+        <span class="arr"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+      </button>
+      <div class="secnote">Мэдэгдлийн эцсийн хугацаа, барьцаа буцаах өдөр — байгаа сануулгын системд холбогдоно.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ B ══════ -->
+<div class="lab"><i>B</i> Олдврын мөр — <em>«Юу хийх вэ» нэг биш, хоёр зам болно</em></div>
+<div class="find">
+  <span class="rail"></span>
+  <div class="fhead">
+    <div style="min-width:0;flex:1">
+      <div class="fmeta">
+        <span class="sevpill"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Өндөр эрсдэл</span>
+        <span class="clauseref">Гэрээний <b class="mono">4.2</b>-р заалт · 3-р хуудас</span>
+        <span class="impact"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg>2,400,000₮ эрсдэлд</span>
+      </div>
+      <div class="ftitle">Барьцаа буцаан олгохгүй байх нөхцөл</div>
+    </div>
+    <span class="chev"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:rotate(180deg)"><path d="m6 9 6 6 6-6"/></svg></span>
+  </div>
+  <div class="fbody">
+    <div class="blk">
+      <h4>Юу болж байна вэ</h4>
+      <p>«Түрээслэгч хугацаанаас өмнө гарвал барьцаа буцаан олгогдохгүй» гэсэн нь гэм буруугаас үл хамааран барьцааг бүхэлд нь хураах эрх олгож байгаа тул хууль бус нөхцөл юм.</p>
+    </div>
+    <div class="blk">
+      <h4>Хуулийн үндэслэл</h4>
+      <div class="lawbox">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+        <span class="t">Иргэний хууль — 286.1 дүгээр зүйл. Барьцааны эд хөрөнгө</span>
+        <span class="op">Эх бичвэр харах <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></span>
+      </div>
+    </div>
+    <div class="blk">
+      <h4>Юу хийх вэ</h4>
+      <div class="lanes">
+        <div class="lane weak">
+          <div class="lanehead"><span class="n">1</span><h5>Хэлэлцэх боломжтой бол</h5></div>
+          <p>«Барьцааг бодит хохирлын хэмжээгээр, нотлох баримтын үндсэн дээр суутгаж, үлдэгдлийг 14 хоногийн дотор буцаана» гэсэн заалтаар солиулах.</p>
+          <span class="tag">Түрээслүүлэгчийн зөвшөөрөл шаардана</span>
+        </div>
+        <div class="lane strong">
+          <div class="lanehead"><span class="n">2</span><h5>Хэлэлцэж чадахгүй бол</h5></div>
+          <ul class="acts">
+            <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Нүүж орох өдөр байрны байдлыг огноо харагдахуйц зураг/видеонд авах</li>
+            <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Хүлээлцэх актыг 2 хувь үйлдэж, хоёр тал гарын үсэг зурах</li>
+            <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Барьцааг банкаар шилжүүлж, гүйлгээний утгад «барьцаа» гэж бичих</li>
+          </ul>
+          <div class="proof">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+            <p>Хохирлыг нотлох үүрэг түрээслүүлэгчид оногддог. Нүүж орох үеийн нотолгоотой бол энэ заалт практикт ажиллахгүй.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ C ══════ -->
+<div class="lab"><i>C</i> Шинэ үр дүн — <em>захидлын оронд үйлдвэрлэгдэх зүйл</em></div>
+<div class="board">
+  <div class="cl-head">
+    <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+    <div>
+      <h2>Өөрийгөө хамгаалах алхмууд</h2>
+      <p>Илэрсэн 3 асуудлаас үүсгэсэн. Алхам бүр нь ямар заалтыг сааруулж байгааг тэмдэглэсэн.</p>
+    </div>
+    <div class="cl-acts">
+      <button class="gbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Татах</button>
+      <button class="gbtn dark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>Сануулга болгох</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <div class="gwhen"><h3>Нүүж орох өдөр</h3><span>Хамгийн чухал — дараа нөхөх боломжгүй</span></div>
+    <div class="items">
+      <div class="item"><span class="box on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="txt">Бүх өрөө, тавилга, цахилгаан хэрэгслийн байдлыг <b>огноо харагдахуйц</b> зураг/видеонд авах<span class="ref">4.2</span>
+        <span class="why2">Гарахдаа «эвдэрсэн» гэж барьцаа хураахаас хамгаална.</span></span></div>
+      <div class="item"><span class="box"></span>
+        <span class="txt">Хүлээлцэх актыг <b>2 хувь</b> үйлдэж, хоёр тал гарын үсэг зурах<span class="ref">4.2</span>
+        <span class="why2">Нэг хувь нь заавал өөрт үлдэнэ.</span></span></div>
+      <div class="item"><span class="box"></span>
+        <span class="txt">Цахилгаан, усны тоолуурын заалтыг зурагт буулгах<span class="ref low">Заалтгүй</span></span></div>
+    </div>
+  </div>
+
+  <div class="grp">
+    <div class="gwhen"><h3>Барьцаа тушаахдаа</h3><span>Мөнгө шилжсэнийг нотлох</span></div>
+    <div class="items">
+      <div class="item"><span class="box"></span>
+        <span class="txt">Бэлнээр биш, <b>банкаар</b> шилжүүлэх. Гүйлгээний утга: «Барьцаа — [хаяг] — [огноо]»<span class="ref">4.2</span></span></div>
+      <div class="item"><span class="box"></span>
+        <span class="txt">Бэлнээр өгөх шаардлагатай бол дүн, огноо, гарын үсэг бүхий баримт авах<span class="ref">4.2</span></span></div>
+    </div>
+  </div>
+
+  <div class="grp">
+    <div class="gwhen"><h3>Сар бүр</h3><span>2 минут — маргааны үндэс</span></div>
+    <div class="items">
+      <div class="item"><span class="box"></span>
+        <span class="txt">Түрээсийг банкаар. Гүйлгээний утга: «2026 оны 9 сарын түрээс»<span class="ref med">7.1</span></span></div>
+      <div class="item"><span class="box"></span>
+        <span class="txt">Засвар хийлгэсэн бол баримт, өмнөх/дараах зургаа хадгалах<span class="ref low">Заалтгүй</span>
+        <span class="why2">Засварын хариуцлага гэрээнд тодорхойгүй тул зардлаа нотлох хэрэгтэй.</span></span></div>
+      <div class="item"><span class="box"></span>
+        <span class="txt">Түрээслүүлэгчтэй бүх харилцааг <b>мессежээр</b> — амаар тохирсноо мессежээр давтаж бичих</span></div>
+    </div>
+  </div>
+
+  <div class="grp">
+    <div class="gwhen"><h3>Гарахын өмнө</h3><span>Сануулга тавигдана</span></div>
+    <div class="items">
+      <div class="item"><span class="box"></span>
+        <span class="txt">Гарахаас <b>30 хоногийн өмнө</b> мэдэгдлээ бичгээр/мессежээр өгөх<span class="ref med">7.1</span>
+        <span class="why2">Гэрээнд 3 хоног гэсэн ч эрт, бичгээр өгсөн нь таны талд нотолгоо болно.</span></span></div>
+      <div class="item"><span class="box"></span>
+        <span class="txt">Гарах өдрийн байдлыг дахин зураг/видеонд авах<span class="ref">4.2</span></span></div>
+      <div class="item"><span class="box"></span>
+        <span class="txt">Барьцаа буцаах хугацааг бичгээр сануулах</span></div>
+    </div>
+  </div>
+
+  <div class="cl-foot">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+    <p><b>Эдгээрийн аль нь ч түрээслүүлэгчийн зөвшөөрөл шаардахгүй.</b> Бүгд ганцаараа хийж болох, гэрээг өөрчлөхгүйгээр эрсдэлийг бууруулах алхмууд.</p>
+  </div>
+</div>
+
+<!-- ══════ D ══════ -->
+<div class="lab"><i>D</i> Яагаад ингэсэн бэ</div>
+<div class="notes">
+  <h2>Дизайны 6 шийдэл</h2>
+  <p class="lede">Аудитын олдвор өөрчлөгдөөгүй. Өөрчлөгдсөн зүйл нь: <b>олдвороос юу үйлдвэрлэгдэх вэ.</b></p>
+  <div class="ncols">
+    <div>
+      <div class="note"><span class="idx">1</span><div><h4>Захидлыг устгаагүй, доошлуулсан</h4><p>Хэлэлцэх боломжтой түрээслүүлэгч ч байдаг. Тэр замыг хаах шалтгаангүй — зүгээр л анхдагч биш болгосон.</p></div></div>
+      <div class="note"><span class="idx">2</span><div><h4>Гарын үсгийн төлөв бүхнийг сольдог</h4><p>Зураагүй бол — асуулт, шийдвэр. Зурсан бол — нотолгоо. <b>metadata.startDate</b> байгаа тул анхдагчийг таамаглаад, хэрэглэгч засаж болно.</p></div></div>
+      <div class="note"><span class="idx">3</span><div><h4>«Асуух 3 асуулт» гэсэн зөөлөн зам</h4><p>Шаардлага биш, асуулт. «Барьцааг ямар тохиолдолд суутгах вэ?» гэж асуухад мөргөлдөөн үүсэхгүй, харин хариулт нь шийдвэрийн мэдээлэл болно.</p></div></div>
+    </div>
+    <div>
+      <div class="note"><span class="idx">4</span><div><h4>Алхам бүр заалтад холбогдсон</h4><p><span class="ref" style="margin:0">4.2</span> шошго нь «энэ юуны төлөө вэ»-г хэлнэ. Утгагүй ерөнхий зөвлөгөө биш, тухайн гэрээнээс гарсан гэдэг нь харагдана.</p></div></div>
+      <div class="note"><span class="idx">5</span><div><h4>Цаг хугацаагаар бүлэглэсэн</h4><p>Ач холбогдлоор биш — «хэзээ хийх вэ» гэдгээр. Чеклист нь хийгддэг байхын тулд амьдралын дарааллаар байх ёстой.</p></div></div>
+      <div class="note"><span class="idx">6</span><div><h4>Байгаа сануулгын системд холбогдоно</h4><p>«Гарахаас 30 хоногийн өмнө мэдэгдэх» нь эцсийн хугацаа. Танай alerts/deadlines функц үүнийг аль хэдийн зөөж чадна.</p></div></div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg>
+    <p><b>Энэ нь миний таамаг хэвээр байна.</b> Та зах зээлийн мэдлэгээсээ «захидал ажиллахгүй» гэдгийг баталсан — гэхдээ «нотолгооны чеклист ажиллана» гэдгийг батлаагүй. Энэ нь 3 хүнээс асуухад хангалттай асуулт: <em>«Нүүж ороход байраа зурагт авдаг уу? Яагаад үгүй вэ?»</em></p>
+  </div>
+</div>
+
+</body>
+</html>

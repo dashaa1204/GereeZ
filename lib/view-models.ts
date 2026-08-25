@@ -63,6 +63,12 @@ export interface ContractVM {
   findings: AuditFinding[];
   strengths: string[];
   expiry: string | null;
+  /** True when the end date is inside the expiry window the summary counts. */
+  expiringSoon: boolean;
+  /** True when the end date has already passed. */
+  expired: boolean;
+  /** True when the audit turned up at least one high-severity finding. */
+  highRisk: boolean;
   /** Previously generated correction letter, or null if none saved yet. */
   proposal: string | null;
 }
@@ -133,6 +139,9 @@ export function mapContract(c: Contract): ContractVM {
     findings: (c.audit_summary?.alerts ?? []).map(mapAlert),
     strengths: c.audit_summary?.strengths ?? [],
     expiry: expiryLabel(c),
+    expiringSoon: getTrackStatus(c) === "expiring-soon",
+    expired: getTrackStatus(c) === "expired",
+    highRisk: (c.audit_summary?.alerts ?? []).some((a) => a.severity === "high"),
     proposal: c.audit_summary?.proposal ?? null,
   };
 }

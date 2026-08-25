@@ -7,6 +7,12 @@ import { cn } from "@/lib/utils";
 interface ProgressRingProps {
   progress: number;
   complete?: boolean;
+  /**
+   * For a phase whose length we genuinely cannot predict. The ring spins a
+   * fixed arc and the percentage is withheld, because a number that stops
+   * moving reads as a hang — an honest "still working" beats a frozen 95%.
+   */
+  indeterminate?: boolean;
   size?: "sm" | "md" | "lg";
   label?: string;
   sublabel?: string;
@@ -22,12 +28,14 @@ const SIZES = {
 export function ProgressRing({
   progress,
   complete = false,
+  indeterminate = false,
   size = "md",
   label,
   sublabel,
   className,
 }: ProgressRingProps) {
   const cfg = SIZES[size];
+  const spinning = indeterminate && !complete;
   const circumference = 2 * Math.PI * cfg.r;
   const clamped = Math.min(Math.max(progress, 0), 100);
   const offset = circumference - (clamped / 100) * circumference;
@@ -48,7 +56,10 @@ export function ProgressRing({
         transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
       >
         <svg
-          className="size-full -rotate-90"
+          className={cn(
+            "size-full -rotate-90",
+            spinning && "animate-spin [animation-duration:1.4s]",
+          )}
           viewBox={`0 0 ${viewSize} ${viewSize}`}
         >
           <circle
@@ -69,10 +80,10 @@ export function ProgressRing({
             strokeWidth={cfg.stroke}
             strokeLinecap="round"
             strokeDasharray={circumference}
-            strokeDashoffset={offset}
+            strokeDashoffset={spinning ? circumference * 0.72 : offset}
             className={cn(
               complete ? "text-success-complete" : "text-foreground",
-              "transition-[stroke-dashoffset] duration-300",
+              !spinning && "transition-[stroke-dashoffset] duration-300",
             )}
             style={{ transitionTimingFunction: "var(--ease-settle)" }}
           />
@@ -101,19 +112,21 @@ export function ProgressRing({
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center"
               >
-                <span
-                  className={cn(
-                    "font-bold tabular-nums tracking-tight text-foreground",
-                    cfg.text,
-                  )}
-                >
-                  {clamped}%
-                </span>
+                {!spinning && (
+                  <span
+                    className={cn(
+                      "font-bold tabular-nums tracking-tight text-foreground",
+                      cfg.text,
+                    )}
+                  >
+                    {clamped}%
+                  </span>
+                )}
                 {sublabel && (
                   <span
                     className={cn(
-                      "mt-0.5 font-semibold tracking-widest text-muted-foreground",
-                      cfg.sub,
+                      "font-semibold tabular-nums tracking-widest text-muted-foreground",
+                      spinning ? cfg.text : cn("mt-0.5", cfg.sub),
                     )}
                   >
                     {sublabel}

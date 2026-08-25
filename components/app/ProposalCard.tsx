@@ -61,8 +61,11 @@ export function ProposalCard({
     }
   }
 
+  // The letter only covers the high and medium findings, so the count says
+  // which ones — a bare "12 асуудал" beside a screen reporting 16 findings
+  // reads as a contradiction, and leaves the reader wondering what was dropped.
   const subtitle = !proposal
-    ? `Илэрсэн ${issueCount} асуудлыг хуулийн үндэслэлтэйгээр засуулах бэлэн захидлыг нэг товшилтоор үүсгэнэ.`
+    ? `Өндөр ба дунд эрсдэлтэй ${issueCount} заалтыг хуулийн үндэслэлтэйгээр засуулах бэлэн захидлыг нэг товшилтоор үүсгэнэ.`
     : collapsed
       ? "Захидал бэлэн. Харахын тулд дарна уу."
       : "Захидал бэлэн.";

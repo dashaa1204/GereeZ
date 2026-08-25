@@ -231,7 +231,7 @@ export async function POST(request: Request) {
           metadata: { ...emptyContractMetadata(), ...cachedSummary.metadata },
           // Pre-detection audits all ran against the Civil Code as rentals.
           contractType: cachedSummary.contractType ?? "rental",
-          retrievedContext: { matches: [], contextText: "" },
+          retrievedContext: { matches: [], contextText: "", mode: "none" },
         };
       } else {
         // Real AI work ahead — charge credits now (idempotent per contract, so
@@ -266,6 +266,9 @@ export async function POST(request: Request) {
       retrievedArticles: cachedFromPriorAudit
         ? (cachedSummary?.retrievedArticles ?? [])
         : formatRetrievedArticlesForStorage(audit.retrievedContext.matches),
+      retrievalMode: cachedFromPriorAudit
+        ? cachedSummary?.retrievalMode
+        : audit.retrievedContext.mode,
       demoMode: isDemoMode(),
       ...(cachedFromPriorAudit ? { cachedFromPriorAudit: true } : {}),
     };

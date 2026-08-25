@@ -15,6 +15,16 @@
   --color-success: var(--success);
   --color-success-complete: var(--success-complete);
   --color-warning: var(--warning);
+  --color-risk-high: var(--risk-high);
+  --color-risk-high-ink: var(--risk-high-ink);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-medium-ink: var(--risk-medium-ink);
+  --color-risk-low: var(--risk-low);
+  --color-risk-low-ink: var(--risk-low-ink);
+  --color-risk-info: var(--risk-info);
+  --color-risk-info-ink: var(--risk-info-ink);
+  --color-risk-ok: var(--risk-ok);
+  --color-risk-ok-ink: var(--risk-ok-ink);
   --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
   --font-sans: var(--font-geist-sans);
@@ -59,92 +69,163 @@
 }
 
 :root {
-  /* Brand accent. Emerald is the only non-severity color in the system: it
-     marks section labels, active navigation and supporting icons. Red/amber
-     stay reserved for risk, so the accent never competes with them. */
-  --brand: oklch(0.53 0.145 163);
+  /* Brand accent. The only non-severity color in the system: it marks section
+     labels, active navigation and supporting icons.
+
+     Hue 180 (teal), not the emerald 163 this started at. The old rule — "red
+     and amber are reserved for risk, so the accent never competes" — protected
+     the wrong pair: green is a severity color too (--risk-ok), and at 163 the
+     accent sat 18° from it. Measured as RGB distance the two were 50 apart for
+     NORMAL vision, so a brand-tinted icon chip could read as a "passed" mark.
+     Moving to 180 opens that to 73, and separates the accent from --risk-high
+     for red-green colorblind viewers (61 -> 87), where emerald and red had been
+     collapsing onto each other. L is 0.49 rather than the original 0.53: the
+     accent is used as 11px text on its own tint, and the old emerald measured
+     4.13:1 there — already under AA before this change touched it. */
+  --brand: oklch(0.49 0.13 180);
   --brand-foreground: oklch(0.985 0 0);
   /* Accent for use ON the dark panel, where the light-mode --brand is too
      dim to read. Intentionally identical in both themes: the panel is too. */
-  --brand-bright: oklch(0.75 0.15 163);
+  --brand-bright: oklch(0.75 0.13 180);
   /* Emphasis surface — the near-black panel the landing page leads with. It is
      deliberately dark in BOTH themes; the dark-mode value is lifted instead of
      deepened so the panel still separates from the (darker) page behind it. */
   --panel: oklch(0.16 0.008 260);
   --panel-foreground: oklch(0.985 0 0);
-  --success: oklch(0.62 0.19 145);
   --success-complete: oklch(0.65 0.17 155);
   --success-glow: oklch(0.65 0.17 155 / 0.25);
-  --warning: oklch(0.72 0.17 55);
+  /* Risk scale. Two values per level: the SIGNAL (rails, dots, icons — the one
+     saturated mark a row is allowed) and the INK (label text, tuned for
+     contrast on --card). Tints are derived with an opacity modifier
+     (bg-risk-high/10) so dark mode needs no second set of surface colors.
+
+     This scale is the single source of truth for red, amber and green. */
+  --risk-high: oklch(0.577 0.21 27);
+  --risk-high-ink: oklch(0.505 0.19 27);
+  --risk-medium: oklch(0.72 0.17 55);
+  --risk-medium-ink: oklch(0.53 0.13 58);
+  --risk-low: oklch(0.62 0.12 250);
+  --risk-low-ink: oklch(0.51 0.11 254);
+  --risk-info: oklch(0.68 0.005 260);
+  --risk-info-ink: oklch(0.5 0.005 260);
+  --risk-ok: oklch(0.62 0.19 145);
+  --risk-ok-ink: oklch(0.48 0.13 150);
+  /* A third role the scale was missing: red as a FILLED SURFACE carrying white
+     text, for the notification badge. The signal red lifts to L 0.66 in dark
+     mode — right in the band where neither white (3.41:1) nor black (3.9:1)
+     clears AA at badge sizes. This one is deliberately identical in both
+     themes, like --panel: a filled chip is its own surface, not a mark on the
+     page, so it has no theme to adapt to.
+
+     Reached as bg-[var(--risk-high-surface)], not a generated utility: adding
+     a new key to the @theme inline block above did not produce one here even
+     after a full dev-server restart, while the keys already in that block work.
+     Worth revisiting; the arbitrary-value form is correct either way. */
+  --risk-high-surface: oklch(0.5 0.2 27);
+
+  /* Process-outcome names, aliased onto the risk scale rather than repeating
+     its values. They used to be literal copies, and the copies had already
+     drifted: `.dark` re-tunes every --risk-* but never re-stated --success or
+     --warning, so in dark mode the risk scale lifted and these two stayed at
+     their light-mode values. Aliases cannot drift. */
+  --success: var(--risk-ok);
+  --warning: var(--risk-medium);
+  /* shadcn's destructive slot. One red in the product, not two that merely
+     look alike (the literal value it held was 50 RGB units from --risk-high —
+     close enough to read as the same colour, far enough to look like a bug). */
+  --destructive: var(--risk-high);
+
+  /* Neutrals carry a trace of hue 260 rather than sitting at chroma 0. These
+     were shadcn's stock greys, never tuned to this product: dead grey beside a
+     saturated accent reads as "left at the default". 260 is the hue --panel and
+     --risk-info already use, so the emphasis panel now belongs to the neutral
+     family instead of being the one faintly blue thing on a grey page. The
+     chroma is far too low to register as colour — it only removes the deadness.
+
+     The white surfaces stay at chroma 0: at L=1 there is no room for it. */
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.145 0.006 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.145 0.006 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.145 0.006 260);
+  --primary: oklch(0.205 0.006 260);
+  --primary-foreground: oklch(0.985 0.002 260);
+  --secondary: oklch(0.97 0.004 260);
+  --secondary-foreground: oklch(0.205 0.006 260);
+  --muted: oklch(0.97 0.004 260);
+  --muted-foreground: oklch(0.556 0.009 260);
+  --accent: oklch(0.97 0.004 260);
+  --accent-foreground: oklch(0.205 0.006 260);
+  --border: oklch(0.922 0.005 260);
+  --input: oklch(0.922 0.005 260);
+  --ring: oklch(0.708 0.008 260);
+  /* Still a bare lightness ramp, and still not a categorical palette — five
+     steps of one hue cannot encode five unrelated series. It is tinted here
+     only so it belongs to the neutral family; the day this product grows a
+     chart, this needs designing properly. Severity charts should reach for the
+     --risk-* tokens instead, so they match the rest of the app. */
+  --chart-1: oklch(0.87 0.004 260);
+  --chart-2: oklch(0.556 0.009 260);
+  --chart-3: oklch(0.439 0.009 260);
+  --chart-4: oklch(0.371 0.008 260);
+  --chart-5: oklch(0.269 0.007 260);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0.002 260);
+  --sidebar-foreground: oklch(0.145 0.006 260);
+  --sidebar-primary: oklch(0.205 0.006 260);
+  --sidebar-primary-foreground: oklch(0.985 0.002 260);
+  --sidebar-accent: oklch(0.97 0.004 260);
+  --sidebar-accent-foreground: oklch(0.205 0.006 260);
+  --sidebar-border: oklch(0.922 0.005 260);
+  --sidebar-ring: oklch(0.708 0.008 260);
 }
 
 .dark {
-  --brand: oklch(0.75 0.15 163);
+  --brand: oklch(0.75 0.13 180);
   --brand-foreground: oklch(0.205 0 0);
   --panel: oklch(0.28 0.008 260);
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  /* Signals lift and inks brighten — the roles stay identical to light mode. */
+  --risk-high: oklch(0.66 0.19 25);
+  --risk-high-ink: oklch(0.78 0.14 25);
+  --risk-medium: oklch(0.78 0.15 60);
+  --risk-medium-ink: oklch(0.85 0.11 70);
+  --risk-low: oklch(0.68 0.11 250);
+  --risk-low-ink: oklch(0.8 0.09 252);
+  --risk-info: oklch(0.6 0.005 260);
+  --risk-info-ink: oklch(0.75 0.005 260);
+  --risk-ok: oklch(0.7 0.16 150);
+  --risk-ok-ink: oklch(0.82 0.13 155);
+  --background: oklch(0.145 0.006 260);
+  --foreground: oklch(0.985 0.002 260);
+  --card: oklch(0.205 0.008 260);
+  --card-foreground: oklch(0.985 0.002 260);
+  --popover: oklch(0.205 0.008 260);
+  --popover-foreground: oklch(0.985 0.002 260);
+  --primary: oklch(0.922 0.004 260);
+  --primary-foreground: oklch(0.205 0.008 260);
+  --secondary: oklch(0.269 0.008 260);
+  --secondary-foreground: oklch(0.985 0.002 260);
+  --muted: oklch(0.269 0.008 260);
+  --muted-foreground: oklch(0.708 0.008 260);
+  --accent: oklch(0.269 0.008 260);
+  --accent-foreground: oklch(0.985 0.002 260);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.556 0.009 260);
+  --chart-1: oklch(0.87 0.008 260);
+  --chart-2: oklch(0.556 0.009 260);
+  --chart-3: oklch(0.439 0.009 260);
+  --chart-4: oklch(0.371 0.009 260);
+  --chart-5: oklch(0.269 0.008 260);
+  --sidebar: oklch(0.205 0.008 260);
+  --sidebar-foreground: oklch(0.985 0.002 260);
   --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0.002 260);
+  --sidebar-accent: oklch(0.269 0.008 260);
+  --sidebar-accent-foreground: oklch(0.985 0.002 260);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.556 0.009 260);
 }
 
 @layer base {
@@ -156,6 +237,13 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Tailwind v4 preflight-ээс товчлуурын cursor: pointer-ийг буцаана */
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  label[for],
+  summary {
+    cursor: pointer;
   }
 }
 

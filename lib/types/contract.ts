@@ -27,6 +27,9 @@ export interface RetrievedArticle {
   articleNumber: string | null;
   sectionTitle: string | null;
   similarity: number;
+  /** Included because the chapter governs this contract type, not because a
+   *  query matched it — `similarity` is then a sort key, not a measurement. */
+  pinned?: boolean;
 }
 
 /**
@@ -81,6 +84,10 @@ export interface AuditSummary {
   rawHash?: string;
   cachedFromPriorAudit?: boolean;
   retrievedArticles?: RetrievedArticle[];
+  /** Which retrieval path fed the audit. Absent on audits stored before this
+   *  was recorded — those cannot be told apart from a silent keyword fallback
+   *  except by their all-identical 0.7 similarities. */
+  retrievalMode?: "vector" | "keyword" | "none";
   /** Structured facts for the tracking view. Absent on pre-tracking audits. */
   metadata?: ContractMetadata;
   /** Detected contract type. Absent on audits stored before type detection shipped (those ran as rental). */
