@@ -20,6 +20,21 @@ import {
   type AuditResultSchema,
 } from "./schema";
 
+/**
+ * How much contract text one audit reads.
+ *
+ * The binding constraint is the model's context window: 200K tokens, which
+ * Mongolian Cyrillic spends faster than English — near a token per character in
+ * the worst case — and which also has to hold the retrieved statutes and the
+ * answer. This leaves comfortable room for both.
+ *
+ * It is a refusal threshold, not a truncation point. The audit is billed per
+ * page, so quietly reading the first third of a 100-page contract and charging
+ * for all of it is the one thing this must not do: over this, the file is
+ * turned away before any credits move (see `app/api/contracts/audit/route.ts`).
+ */
+export const MAX_ANALYZED_CHARS = 120_000;
+
 /** Article numbers the retrieval step actually supplied, for citation grounding. */
 function retrievedArticleNumbers(context: RetrievedLegalContext): Set<string> {
   return new Set(
@@ -57,6 +72,16 @@ export async function analyzeContractText(
     );
   }
 
+  // Refused, not shortened. This check sits ahead of retrieval — and the audit
+  // route runs the same one ahead of charging — so a contract we cannot read
+  // whole costs the user nothing rather than buying them a partial audit they
+  // were never told was partial.
+  if (contractText.length > MAX_ANALYZED_CHARS) {
+    throw new Error(
+      `Гэрээний текст хэт урт байна (${contractText.length.toLocaleString()} тэмдэгт). Нэг шинжилгээгээр ${MAX_ANALYZED_CHARS.toLocaleString()} тэмдэгт хүртэл уншина — гэрээгээ хэсэгчлэн оруулна уу.`,
+    );
+  }
+
   // Rental contracts are audited against the Civil Code, employment contracts
   // against the Labor Law — the type steers retrieval, prompt, and citations.
   const contractType = detectContractType(contractText);
@@ -66,15 +91,10 @@ export async function analyzeContractText(
     contractType,
   );
 
-  const truncated =
-    contractText.length > 80_000
-      ? `${contractText.slice(0, 80_000)}\n\n[Шинжилгээний хэмжээнд тасалсан]`
-      : contractText;
-
   const provider = getAuditProvider();
 
   const object = await generateAuditWithRetry(
-    truncated,
+    contractText,
     buildRAGSystemPrompt(retrievedContext.contextText, contractType),
     provider,
     contractType,

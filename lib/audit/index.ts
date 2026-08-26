@@ -1,4 +1,4 @@
-export { analyzeContractText } from "./analyze";
+export { analyzeContractText, MAX_ANALYZED_CHARS } from "./analyze";
 export { buildRAGSystemPrompt } from "./prompt";
 export {
   auditResultSchema,

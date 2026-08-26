@@ -6,6 +6,7 @@ import {
   extractPdfText,
   extractTextWithOCR,
   getPdfPageCount,
+  MAX_ANALYZED_CHARS,
   MAX_AUDIT_PAGES,
   MAX_OCR_PDF_PAGES,
 } from "@/lib/audit";
@@ -25,10 +26,11 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-// High sanity ceiling on extracted text. Per-page credit charging bounds the
-// real cost; this only refuses a pathologically long file rather than
-// truncating it. Comfortably within Haiku's 200K-token context window.
-const MAX_CONTRACT_CHARS = 400_000;
+// The ceiling on extracted text is MAX_ANALYZED_CHARS — how much the audit can
+// actually read (lib/audit/analyze.ts). It used to be a separate 400,000 here
+// while the analysis quietly cut the text at 80,000, so a long contract was
+// billed by the page and audited by the third. One number now, checked before
+// any credits move.
 
 export async function POST(request: Request) {
   let contractId: string | undefined;
@@ -195,9 +197,9 @@ export async function POST(request: Request) {
       contractText = await extractTextWithOCR(buffer, mediaType);
     }
 
-    if (contractText.length > MAX_CONTRACT_CHARS) {
+    if (contractText.length > MAX_ANALYZED_CHARS) {
       return failAudit(
-        `Гэрээний текст хэт урт байна (${contractText.length.toLocaleString()} тэмдэгт). ${MAX_CONTRACT_CHARS.toLocaleString()} тэмдэгтээс бага байх ёстой.`,
+        `Гэрээний текст хэт урт байна (${contractText.length.toLocaleString()} тэмдэгт). Нэг шинжилгээгээр ${MAX_ANALYZED_CHARS.toLocaleString()} тэмдэгт хүртэл уншина — гэрээгээ хэсэгчлэн оруулна уу. Кредит зарцуулагдаагүй.`,
       );
     }
 

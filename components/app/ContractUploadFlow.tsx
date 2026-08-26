@@ -16,6 +16,7 @@ import { SettleIn } from "@/components/ui/SettleIn";
 import { useAnimatedProgress } from "@/lib/hooks/useAnimatedProgress";
 import { triggerHaptic } from "@/lib/hooks/useHaptic";
 import {
+  ApiError,
   auditContract,
   quoteContract,
   uploadContract,
@@ -113,6 +114,9 @@ export function ContractUploadFlow() {
   );
   const [quote, setQuote] = useState<AuditQuote | null>(null);
   const [recharging, setRecharging] = useState(false);
+  // Set when the audit refused the file itself — too long, too many pages. The
+  // same file will earn the same answer, so there is nothing to retry.
+  const [permanentError, setPermanentError] = useState(false);
 
   const target = progressTarget(state);
   const duration = progressDuration(state);
@@ -124,8 +128,10 @@ export function ContractUploadFlow() {
   // The gate survives a failed audit: the file is already uploaded and the
   // credits are back (every failing path in the audit route refunds), so the
   // way out is one more attempt — not re-picking the same file and paying the
-  // upload over again.
-  const retryable = state === "error" && pendingContractId != null;
+  // upload over again. Unless the file is what was refused, in which case the
+  // message is the whole answer and a retry button would only lie.
+  const retryable =
+    state === "error" && pendingContractId != null && !permanentError;
   const showGate = quote != null && (state === "quote" || retryable);
 
   // The audit runs as long as it runs, so the ring reports elapsed time rather
@@ -167,8 +173,9 @@ export function ContractUploadFlow() {
     return false;
   }, [consentAccepted]);
 
-  const fail = useCallback((message: string) => {
-    setError(message);
+  const fail = useCallback((cause: unknown, fallback = "Алдаа гарлаа") => {
+    setError(cause instanceof Error ? cause.message : String(cause || fallback));
+    setPermanentError(cause instanceof ApiError && cause.permanent);
     setState("error");
     setShake("zone");
     triggerHaptic("error");
@@ -209,6 +216,7 @@ export function ContractUploadFlow() {
       }
 
       setError(null);
+      setPermanentError(false);
       setQuote(null);
       setPendingContractId(null);
       hapticFiredRef.current = false;
@@ -246,7 +254,7 @@ export function ContractUploadFlow() {
         setState("quote");
         triggerHaptic("light");
       } catch (err) {
-        fail(err instanceof Error ? err.message : "Алдаа гарлаа");
+        fail(err, "Алдаа гарлаа");
       }
     },
     [requireConsent, fail],
@@ -257,12 +265,13 @@ export function ContractUploadFlow() {
     triggerHaptic("light");
     try {
       setError(null);
+      setPermanentError(false);
       setElapsed(0);
       setState("auditing");
       await auditContract(pendingContractId);
       setState("success");
     } catch (err) {
-      fail(err instanceof Error ? err.message : "Шинжилгээ амжилтгүй боллоо");
+      fail(err, "Шинжилгээ амжилтгүй боллоо");
     }
   }, [pendingContractId, fail]);
 
