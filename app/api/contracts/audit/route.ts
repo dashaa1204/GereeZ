@@ -33,6 +33,9 @@ const MAX_CONTRACT_CHARS = 400_000;
 export async function POST(request: Request) {
   let contractId: string | undefined;
   let ownershipVerified = false;
+  // Set the moment credits leave the balance. Every exit after that point has
+  // to put them back: the user paid for an audit they are not going to get.
+  let charged = false;
 
   try {
     const user = await getAuthenticatedUser();
@@ -76,18 +79,29 @@ export async function POST(request: Request) {
 
     ownershipVerified = true;
 
-    // Mark the contract failed and return a user-facing validation error.
+    // The single way out of a failed audit: refund whatever was charged, leave
+    // the row in a state the user can retry from, and say what went wrong.
+    // `updated_at` is stamped by hand because nothing else stamps it — the
+    // notification feed dates the failure from it, and the stranded-audit
+    // sweep (lib/stranded-audits.ts) measures staleness with it.
     const failAudit = async (message: string, status = 400) => {
+      if (charged) {
+        await refundCredits(contractId!);
+        charged = false;
+      }
       await supabase
         .from("contracts")
-        .update({ status: "failed" })
+        .update({ status: "failed", updated_at: new Date().toISOString() })
         .eq("id", contractId);
       return NextResponse.json({ error: message }, { status });
     };
 
+    // Stamping `updated_at` here starts the staleness clock at the moment the
+    // audit begins rather than at upload — without it, auditing a contract
+    // uploaded hours ago would look abandoned to the sweep while it is running.
     await supabase
       .from("contracts")
-      .update({ status: "processing" })
+      .update({ status: "processing", updated_at: new Date().toISOString() })
       .eq("id", contractId);
 
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -95,13 +109,9 @@ export async function POST(request: Request) {
       .download(contract.storage_path);
 
     if (downloadError || !fileData) {
-      await supabase
-        .from("contracts")
-        .update({ status: "failed" })
-        .eq("id", contractId);
-      return NextResponse.json(
-        { error: `PDF татахад алдаа: ${downloadError?.message}` },
-        { status: 500 },
+      return failAudit(
+        `PDF татахад алдаа: ${downloadError?.message}`,
+        500,
       );
     }
 
@@ -244,13 +254,10 @@ export async function POST(request: Request) {
             402,
           );
         }
-        try {
-          audit = await analyzeContractText(contractText);
-        } catch (err) {
-          // Refund so a transient AI failure doesn't cost the user credits.
-          await refundCredits(contractId);
-          throw err;
-        }
+        charged = true;
+        // Anything that throws from here on lands in the outer catch, which
+        // refunds — no local catch needed to protect the charge.
+        audit = await analyzeContractText(contractText);
       }
     }
 
@@ -289,9 +296,12 @@ export async function POST(request: Request) {
       .single();
 
     if (updateError) {
-      return NextResponse.json(
-        { error: `Шинжилгээ хадгалахад алдаа: ${updateError.message}` },
-        { status: 500 },
+      // The AI work is done but unsaved, so the user has nothing to show for
+      // the credits — refund and let them retry rather than bill for a result
+      // that never reached the database.
+      return failAudit(
+        `Шинжилгээ хадгалахад алдаа: ${updateError.message}`,
+        500,
       );
     }
 
@@ -301,13 +311,16 @@ export async function POST(request: Request) {
     // early failure on an attacker-supplied contractId can't flip its status.
     if (contractId && ownershipVerified) {
       try {
+        // The refund comes first: a failed status write still leaves the user
+        // with their credits back, which is the part they'd notice.
+        if (charged) await refundCredits(contractId);
         const supabase = createAdminClient();
         await supabase
           .from("contracts")
-          .update({ status: "failed" })
+          .update({ status: "failed", updated_at: new Date().toISOString() })
           .eq("id", contractId);
       } catch {
-        // Best-effort status update
+        // Best-effort refund and status update
       }
     }
 
