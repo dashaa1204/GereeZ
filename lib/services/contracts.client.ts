@@ -1,9 +1,29 @@
 import type { Contract } from "@/lib/types";
 
+/**
+ * An API error that still knows its status, so a caller can tell a refusal the
+ * same request will always earn (400 — too long, too many pages) from one worth
+ * trying again (a timeout, a 500, a rate limit).
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+
+  /** True when repeating the identical request cannot produce a different answer. */
+  get permanent(): boolean {
+    return this.status === 400;
+  }
+}
+
 async function parseJsonResponse(response: Response, fallbackError: string) {
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error ?? fallbackError);
+    throw new ApiError(data.error ?? fallbackError, response.status);
   }
   return data;
 }
