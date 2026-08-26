@@ -58,6 +58,12 @@ export interface ContractVM {
   status: "compliant" | "warning" | "risk" | "pending" | "failed";
   /** Audited (completed) contracts are "paid"/unlocked; others are locked. */
   paid: boolean;
+  /**
+   * True when the uploaded file is still in storage, so the screens can offer
+   * a way back to it. Seeded and pre-storage rows carry no path and must not
+   * be given a link that can only 404.
+   */
+  hasFile: boolean;
   pages: number | null;
   summary: string | null;
   findings: AuditFinding[];
@@ -138,6 +144,7 @@ export function mapContract(c: Contract): ContractVM {
     score: c.compliance_score,
     status: statusOf(c),
     paid: c.status === "completed",
+    hasFile: Boolean(c.storage_path),
     pages: c.page_count,
     summary: c.audit_summary?.summary ?? null,
     findings: (c.audit_summary?.alerts ?? []).map(mapAlert),

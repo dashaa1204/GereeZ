@@ -98,4 +98,11 @@ describe("mapContract", () => {
     expect(failed.status).toBe("failed");
     expect(failed.paid).toBe(false);
   });
+
+  it("only claims a file when one is actually stored", () => {
+    // Seeded and pre-storage rows carry no path. Offering a link to them
+    // would send the reader to a 404 instead of their contract.
+    expect(mapContract(makeContract({ storage_path: "1782-contract.pdf" })).hasFile).toBe(true);
+    expect(mapContract(makeContract({ storage_path: "" })).hasFile).toBe(false);
+  });
 });

@@ -87,15 +87,20 @@ const SIGNED_URL_TTL_SECONDS = 60 * 60;
  * Mint a short-lived signed URL for a contract PDF in the private bucket.
  * Use this whenever the UI needs to let a user view or download their file —
  * the bucket is private, so permanent public URLs no longer exist.
+ *
+ * `download` asks the browser to save the file instead of opening it; pass the
+ * contract's own file name and that is what the saved copy is called, rather
+ * than the storage path we renamed it to on upload.
  */
 export async function createSignedContractUrl(
   storagePath: string,
   expiresIn: number = SIGNED_URL_TTL_SECONDS,
+  options: { download?: boolean | string } = {},
 ): Promise<string> {
   const supabase = createAdminClient();
   const { data, error } = await supabase.storage
     .from(CONTRACTS_BUCKET)
-    .createSignedUrl(storagePath, expiresIn);
+    .createSignedUrl(storagePath, expiresIn, options);
 
   if (error || !data?.signedUrl) {
     throw new Error(
