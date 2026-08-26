@@ -48,7 +48,7 @@ function progressTarget(state: UploadState): number {
     case "quoting":
       return 50;
     case "auditing":
-      return 95;
+      return 90;
     case "success":
       return 100;
     default:
@@ -69,6 +69,11 @@ function progressDuration(state: UploadState): number {
     default:
       return 400;
   }
+}
+
+/** Seconds as `0:07` — an honest clock for a phase of unknown length. */
+function formatElapsed(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
 function phaseLabel(state: UploadState): string {
@@ -93,12 +98,15 @@ function phaseLabel(state: UploadState): string {
 export function ContractUploadFlow() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const consentRef = useRef<HTMLInputElement>(null);
   const hapticFiredRef = useRef(false);
 
   const [state, setState] = useState<UploadState>("idle");
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [shake, setShake] = useState(false);
+  // Which control the error is about, so the shake happens where the fix is.
+  const [shake, setShake] = useState<"zone" | "consent" | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [pendingContractId, setPendingContractId] = useState<string | null>(
     null,
@@ -113,7 +121,23 @@ export function ContractUploadFlow() {
     state === "uploading" || state === "quoting" || state === "auditing";
   const ringComplete = state === "success" && progress >= 100;
   const showRing = isBusy || state === "success";
-  const showGate = state === "quote" && quote;
+  // The gate survives a failed audit: the file is already uploaded and the
+  // credits were refunded server-side, so the way out is one more attempt —
+  // not re-picking the same file and paying the upload over again.
+  const retryable = state === "error" && pendingContractId != null;
+  const showGate = quote != null && (state === "quote" || retryable);
+
+  // The audit runs as long as it runs, so the ring reports elapsed time rather
+  // than a fabricated percentage of an unknown total.
+  useEffect(() => {
+    if (state !== "auditing") return;
+    const startedAt = Date.now();
+    const id = setInterval(
+      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+      1000,
+    );
+    return () => clearInterval(id);
+  }, [state]);
 
   // On a completed audit, take the user straight into the new audit screen for
   // the contract they just analysed (and revalidate so it appears in lists).
@@ -131,19 +155,23 @@ export function ContractUploadFlow() {
 
   const requireConsent = useCallback(() => {
     if (consentAccepted) return true;
-    setError("Гэрээ оруулахын өмнө дээрх нөхцөлийг хүлээн зөвшөөрнө үү.");
-    setShake(true);
+    setError("Гэрээ оруулахын өмнө доорх нөхцөлийг хүлээн зөвшөөрнө үү.");
+    // Shake and focus the checkbox, not the drop zone: the eye goes where the
+    // motion is, and the thing that needs fixing is the box below.
+    setShake("consent");
+    consentRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    consentRef.current?.focus({ preventScroll: true });
     triggerHaptic("error");
-    setTimeout(() => setShake(false), 300);
+    setTimeout(() => setShake(null), 300);
     return false;
   }, [consentAccepted]);
 
   const fail = useCallback((message: string) => {
     setError(message);
     setState("error");
-    setShake(true);
+    setShake("zone");
     triggerHaptic("error");
-    setTimeout(() => setShake(false), 300);
+    setTimeout(() => setShake(null), 300);
   }, []);
 
   const processFiles = useCallback(
@@ -227,6 +255,8 @@ export function ContractUploadFlow() {
     if (!pendingContractId) return;
     triggerHaptic("light");
     try {
+      setError(null);
+      setElapsed(0);
       setState("auditing");
       await auditContract(pendingContractId);
       setState("success");
@@ -282,10 +312,180 @@ export function ContractUploadFlow() {
         onChange={handleFileChange}
       />
 
-      {/* consent gate — keep parity with the legal acceptance required before
-          any contract leaves the device for analysis */}
-      <label className="flex items-start gap-2.5 rounded-xl border border-border bg-card px-3.5 py-3 cursor-pointer">
+
+      {/* upload zone / quote gate */}
+      {showGate ? (
+        <SettleIn>
+          <div className="border-brand/20 bg-brand/5 rounded-2xl border p-5">
+            <div className="text-brand flex items-center gap-2 text-sm font-semibold">
+              <Coins className="size-4" />
+              {retryable ? "Шинжилгээ амжилтгүй боллоо" : "Шинжилгээний төлбөр"}
+            </div>
+            {retryable && (
+              <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
+                Файл хадгалагдсан, кредит буцаагдсан. Дахин оролдоход шинээр
+                файл оруулах шаардлагагүй.
+              </p>
+            )}
+            <dl className="mt-3 space-y-1.5 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Хуудасны тоо</dt>
+                <dd className="font-medium text-foreground">{quote.pageCount}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Шинжилгээний үнэ</dt>
+                <dd className="font-medium text-foreground">{quote.cost} кредит</dd>
+              </div>
+              <div className="flex items-center justify-between border-t border-border pt-1.5">
+                <dt className="text-muted-foreground">Таны баланс</dt>
+                <dd
+                  className={
+                    quote.sufficient
+                      ? "font-semibold text-foreground"
+                      : "font-semibold text-destructive"
+                  }
+                >
+                  {quote.balance} кредит
+                </dd>
+              </div>
+            </dl>
+
+            {quote.sufficient ? (
+              <button
+                type="button"
+                onClick={confirmAudit}
+                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
+              >
+                <Sparkles className="size-4" />
+                {retryable
+                  ? `Дахин шинжлэх (${quote.cost} кредит)`
+                  : `Баталгаажуулж, шинжлэх (${quote.cost} кредит)`}
+              </button>
+            ) : (
+              <>
+                <p className="mt-3 flex items-start gap-2 text-xs text-destructive">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                  Кредит хүрэлцэхгүй байна. Доорх товчоор үнэгүй цэнэглэнэ үү (demo).
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRecharge}
+                  disabled={recharging}
+                  className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60"
+                >
+                  {recharging ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Coins className="size-4" />
+                  )}
+                  Кредит цэнэглэх
+                </button>
+              </>
+            )}
+          </div>
+        </SettleIn>
+      ) : (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (consentAccepted && !isBusy) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          className={`relative border-2 rounded-2xl p-8 lg:p-10 flex flex-col items-center gap-3 transition-all
+            ${showRing ? "border-solid" : "border-dashed"}
+            ${
+              state === "success"
+                ? "border-emerald-500/40 bg-emerald-500/5"
+                : dragOver && consentAccepted
+                  ? "border-brand bg-brand/5 scale-[0.998]"
+                  : "border-border bg-card hover:border-brand/50 hover:bg-brand/3"
+            }
+            ${isBusy ? "pointer-events-none" : ""}
+            ${shake === "zone" ? "animate-shake" : ""}`}
+        >
+          {/* The whole zone is one real button laid over the artwork, rather
+              than a div with a click handler: it takes keyboard focus, shows a
+              focus ring around the area it actually activates, and announces
+              itself to a screen reader. The card below is decoration. */}
+          {!showRing && (
+            <button
+              type="button"
+              onClick={openPicker}
+              aria-label={
+                consentAccepted
+                  ? "Гэрээний файл сонгох"
+                  : "Нөхцөлийг зөвшөөрөөд гэрээний файл сонгох"
+              }
+              className="focus-visible:ring-brand absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            />
+          )}
+          <AnimatePresence mode="wait">
+            {showRing ? (
+              <SettleIn key="ring">
+                <ProgressRing
+                  progress={progress}
+                  complete={ringComplete}
+                  indeterminate={state === "auditing"}
+                  sublabel={
+                    state === "auditing" ? formatElapsed(elapsed) : undefined
+                  }
+                  size="sm"
+                  label={phaseLabel(state)}
+                />
+                {state === "auditing" && (
+                  <p className="text-muted-foreground mt-2 text-center text-xs">
+                    Ихэвчлэн 20–60 секунд болно. Хуудас олонтой гэрээ удаж болно.
+                  </p>
+                )}
+              </SettleIn>
+            ) : (
+              <SettleIn
+                key="drop"
+                className="pointer-events-none flex flex-col items-center gap-3"
+              >
+                <div className="bg-brand/10 flex size-14 items-center justify-center rounded-2xl">
+                  <Upload className="text-brand size-7" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-foreground">PDF гэрээ оруулах</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Зурган гэрээ бол хуудсуудаа нэг дор сонгоорой (OCR)
+                  </p>
+                </div>
+                <span className="mt-1 flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl">
+                  <Sparkles className="w-4 h-4" />
+                  AI шинжилгээ хийх
+                </span>
+                {/* The price is part of the conceptual model, so it stays on
+                    screen whether or not the terms have been accepted. */}
+                <p className="text-xs text-muted-foreground">
+                  1 хуудас = 1 кредит (20 MB хүртэл)
+                </p>
+                {!consentAccepted && (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Эхлээд доорх нөхцөлийг зөвшөөрнө үү
+                  </p>
+                )}
+              </SettleIn>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* consent gate — the legal acceptance required before any contract
+          leaves the device. It sits under the drop zone as fine print rather
+          than in front of it: the check still blocks the upload, but reading
+          the terms is no longer the first thing the screen asks for. */}
+      <label
+        className={`flex cursor-pointer items-start gap-2.5 rounded-xl px-3.5 py-3 transition-colors ${
+          shake === "consent"
+            ? "border-destructive/40 bg-destructive/5 animate-shake border"
+            : "bg-muted/50 border border-transparent"
+        }`}
+      >
         <input
+          ref={consentRef}
           type="checkbox"
           checked={consentAccepted}
           onChange={(e) => {
@@ -323,137 +523,6 @@ export function ContractUploadFlow() {
           -ийг уншиж, хүлээн зөвшөөрч байна.
         </span>
       </label>
-
-      {/* upload zone / quote gate */}
-      {showGate ? (
-        <SettleIn>
-          <div className="border-brand/20 bg-brand/5 rounded-2xl border p-5">
-            <div className="text-brand flex items-center gap-2 text-sm font-semibold">
-              <Coins className="size-4" />
-              Шинжилгээний төлбөр
-            </div>
-            <dl className="mt-3 space-y-1.5 text-sm">
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Хуудасны тоо</dt>
-                <dd className="font-medium text-foreground">{quote.pageCount}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Шинжилгээний үнэ</dt>
-                <dd className="font-medium text-foreground">{quote.cost} кредит</dd>
-              </div>
-              <div className="flex items-center justify-between border-t border-border pt-1.5">
-                <dt className="text-muted-foreground">Таны баланс</dt>
-                <dd
-                  className={
-                    quote.sufficient
-                      ? "font-semibold text-foreground"
-                      : "font-semibold text-destructive"
-                  }
-                >
-                  {quote.balance} кредит
-                </dd>
-              </div>
-            </dl>
-
-            {quote.sufficient ? (
-              <button
-                type="button"
-                onClick={confirmAudit}
-                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
-              >
-                <Sparkles className="size-4" />
-                Баталгаажуулж, шинжлэх ({quote.cost} кредит)
-              </button>
-            ) : (
-              <>
-                <p className="mt-3 flex items-start gap-2 text-xs text-destructive">
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  Кредит хүрэлцэхгүй байна. Доорх товчоор үнэгүй цэнэглэнэ үү (demo).
-                </p>
-                <button
-                  type="button"
-                  onClick={handleRecharge}
-                  disabled={recharging}
-                  className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60"
-                >
-                  {recharging ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Coins className="size-4" />
-                  )}
-                  Кредит цэнэглэх
-                </button>
-              </>
-            )}
-          </div>
-        </SettleIn>
-      ) : (
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            if (consentAccepted && !isBusy) setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => {
-            if (!isBusy && !showRing) openPicker();
-          }}
-          className={`relative border-2 rounded-2xl p-7 flex flex-col items-center gap-3 transition-all
-            ${showRing ? "border-solid" : "border-dashed cursor-pointer"}
-            ${
-              state === "success"
-                ? "border-emerald-500/40 bg-emerald-500/5"
-                : dragOver && consentAccepted
-                  ? "border-brand bg-brand/5 scale-[0.998]"
-                  : "border-border bg-card hover:border-brand/50 hover:bg-brand/3"
-            }
-            ${isBusy ? "pointer-events-none" : ""}
-            ${shake ? "animate-shake" : ""}`}
-        >
-          <AnimatePresence mode="wait">
-            {showRing ? (
-              <SettleIn key="ring">
-                <ProgressRing
-                  progress={progress}
-                  complete={ringComplete}
-                  size="sm"
-                  label={phaseLabel(state)}
-                />
-              </SettleIn>
-            ) : (
-              <SettleIn key="drop" className="flex flex-col items-center gap-3">
-                <div className="bg-brand/10 flex size-14 items-center justify-center rounded-2xl">
-                  <Upload className="text-brand size-7" />
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-foreground">PDF гэрээ оруулах</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    Зурган гэрээ бол хуудсуудаа нэг дор сонгоорой (OCR)
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openPicker();
-                  }}
-                  className="mt-1 flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  AI шинжилгээ хийх
-                </button>
-                <p className="text-xs text-muted-foreground">
-                  {state === "error"
-                    ? "Дахин оролдоно уу"
-                    : consentAccepted
-                      ? "1 хуудас = 1 кредит (20 MB хүртэл)"
-                      : "Эхлээд дээрх нөхцөлийг зөвшөөрнө үү"}
-                </p>
-              </SettleIn>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
 
       {error && (
         <SettleIn className="flex items-start gap-2 text-xs text-destructive">

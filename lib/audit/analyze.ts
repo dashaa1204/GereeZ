@@ -12,12 +12,22 @@ import {
   retrieveLegalContextByKeywords,
 } from "@/lib/vector-store";
 import { buildRAGSystemPrompt } from "./prompt";
-import { normalizeAuditResult } from "./normalize";
+import { verifyCitationRelevance } from "./citations";
+import { groundCitations, normalizeAuditResult } from "./normalize";
 import {
   auditResultSchema,
   type AnalyzeContractResult,
   type AuditResultSchema,
 } from "./schema";
+
+/** Article numbers the retrieval step actually supplied, for citation grounding. */
+function retrievedArticleNumbers(context: RetrievedLegalContext): Set<string> {
+  return new Set(
+    context.matches
+      .map((match) => match.article_number)
+      .filter((n): n is string => Boolean(n)),
+  );
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -70,18 +80,39 @@ export async function analyzeContractText(
     contractType,
   );
 
+  const normalized = normalizeAuditResult(
+    object,
+    LAW_NAME_BY_CONTRACT_TYPE[contractType],
+  );
+
+  // Two gates, in order of cost: the cheap one drops citations to articles that
+  // were never retrieved, the paid one drops citations whose article does not
+  // actually speak to the finding (see ./citations).
+  const grounded = groundCitations(
+    normalized.alerts,
+    retrievedArticleNumbers(retrievedContext),
+  );
+
   return {
-    ...normalizeAuditResult(object, LAW_NAME_BY_CONTRACT_TYPE[contractType]),
+    ...normalized,
+    alerts: await verifyCitationRelevance(
+      grounded,
+      retrievedContext.matches,
+    ),
     contractType,
     retrievedContext,
   };
 }
 
+// Naming an article range here is what taught the model to cite from memory:
+// with no context to check against, "287–301 дээр тулгуурлан шинжил" came back
+// as confident citations to articles nobody had retrieved. Without a source,
+// the honest output is findings with no citation at all.
 const RETRIEVAL_UNAVAILABLE_MESSAGES: Record<ContractType, string> = {
   rental:
-    "Хуулийн мэдлэгийн сангаас мэдээлэл татах боломжгүй. Иргэний хуулийн түрээсийн ерөнхий зарчмууд (287–301 дүгээр зүйл) дээр тулгуурлан шинжил.",
+    "Хуулийн мэдлэгийн сангаас мэдээлэл татаж чадсангүй. Гэрээний эрсдэлийг ерөнхий зарчмаар тэмдэглэ, гэхдээ ЯМАР Ч зүйлийн дугаар бүү иш тат — articleReference-ийг хоосон үлдээж, confidence-ийг \"low\" болго.",
   employment:
-    "Хуулийн мэдлэгийн сангаас мэдээлэл татах боломжгүй. Хөдөлмөрийн тухай хуулийн хөдөлмөрийн гэрээний ерөнхий зарчмууд дээр тулгуурлан шинжил.",
+    "Хуулийн мэдлэгийн сангаас мэдээлэл татаж чадсангүй. Гэрээний эрсдэлийг ерөнхий зарчмаар тэмдэглэ, гэхдээ ЯМАР Ч зүйлийн дугаар бүү иш тат — articleReference-ийг хоосон үлдээж, confidence-ийг \"low\" болго.",
 };
 
 async function retrieveLegalContextSafe(
@@ -104,6 +135,7 @@ async function retrieveLegalContextSafe(
     return {
       matches: [],
       contextText: RETRIEVAL_UNAVAILABLE_MESSAGES[contractType],
+      mode: "none",
     };
   }
 }

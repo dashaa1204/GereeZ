@@ -35,6 +35,7 @@ export function StatusBar() {
           {back ? (
             <button
               onClick={() => router.back()}
+              aria-label="Буцах"
               className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center mr-1 hover:bg-muted/70 transition-colors"
             >
               <ChevronDown className="w-4 h-4 rotate-90 text-foreground" />
@@ -51,6 +52,7 @@ export function StatusBar() {
         </div>
         <button
           onClick={toggle}
+          aria-label={dark ? "Гэрэл горимд шилжих" : "Харанхуй горимд шилжих"}
           className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors lg:hidden"
         >
           {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

@@ -97,6 +97,7 @@ export function generateDemoAudit(contractText: string): AnalyzeContractResult {
         },
       ],
       contextText: "[DEMO] Жишээ хуулийн эх сурвалж",
+      mode: "vector",
     },
   };
 }

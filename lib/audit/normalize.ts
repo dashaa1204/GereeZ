@@ -1,3 +1,4 @@
+import { citedArticleNumber } from "./citations";
 import { emptyContractMetadata, type AuditResultSchema } from "./schema";
 
 const SEVERITY_DEDUCTIONS = {
@@ -256,4 +257,29 @@ export function normalizeAuditResult(
     alerts,
     metadata: normalizeMetadata(result.metadata),
   };
+}
+
+/**
+ * Drop citations the retrieval step never supplied.
+ *
+ * The prompt tells the model to cite only from the context it was given, but a
+ * rule in a prompt is not a guarantee — and an article number the user cannot
+ * look up is worse than no number, because the finding card renders it as if it
+ * were sourced. The finding itself survives (the risk it describes can be real
+ * even when the citation is not); it loses the reference and drops to low
+ * confidence, which is what "we could not source this" honestly looks like.
+ */
+export function groundCitations(
+  alerts: AuditResultSchema["alerts"],
+  retrievedArticles: Set<string>,
+): AuditResultSchema["alerts"] {
+  return alerts.map((alert) => {
+    const cited = citedArticleNumber(alert.articleReference);
+    if (!cited || retrievedArticles.has(cited)) return alert;
+
+    console.warn(
+      `Ungrounded citation dropped: ${alert.articleReference} (${alert.title})`,
+    );
+    return { ...alert, articleReference: "", confidence: "low" as const };
+  });
 }

@@ -1,176 +1,467 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Banknote,
   Building2,
   Calendar,
   CheckCircle2,
+  ChevronDown,
   Clock,
   CreditCard,
-  FileText,
+  Loader2,
+  Scale,
+  Sparkles,
   User,
-  XCircle,
 } from "lucide-react";
-import type { ContractVM } from "@/lib/view-models";
+import type { AuditFinding, ContractVM } from "@/lib/view-models";
+import type { LegalArticle } from "@/lib/legal-articles";
+import { auditContract } from "@/lib/services/contracts.client";
+import { fetchLegalArticle } from "@/lib/services/legal.client";
 import { fmt, scoreLabel } from "../display";
-import { ScoreRing } from "../ScoreRing";
-import { FindingRow } from "../FindingRow";
 import { ProposalCard } from "../ProposalCard";
-import { Eyebrow } from "../kit";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+/**
+ * Stock shadcn build of the audit result. Every surface here is an unmodified
+ * component from `components/ui` — Card, Tabs, Accordion, Badge, Progress,
+ * Separator — with no bespoke shadows, rails or panels layered on top. The
+ * severity signal is carried by the badge variant and its label rather than by
+ * a colored rail.
+ */
 export function AuditScreen({ contract }: { contract: ContractVM }) {
-  const [tab, setTab] = useState<"findings" | "strengths" | "meta">("findings");
   const findings = contract.findings;
   const strengths = contract.strengths;
   const highCount = findings.filter((f) => f.severity === "high").length;
   const medCount = findings.filter((f) => f.severity === "medium").length;
+  // Everything the two headline severities don't cover. The tally has to add
+  // up to the count on the Эрсдэл tab or the two contradict each other, and a
+  // reader who does the arithmetic is left wondering what got hidden.
+  const lowCount = findings.length - highCount - medCount;
+
+  // Findings, grouped so the severity can be stated once per group instead of
+  // repeated on every row. Empty groups are dropped rather than rendered as a
+  // heading with nothing under it.
+  const findingGroups = (["high", "medium", "low", "info"] as const)
+    .map((severity) => ({
+      severity,
+      items: findings.filter((f) => f.severity === severity),
+    }))
+    .filter((group) => group.items.length > 0);
+
   // Fields the extractor could not find are dropped rather than rendered as a
   // dash — an absent row reads as "not in the contract" just as clearly.
   const metaRows = [
-    { icon: <User className="w-4 h-4" />, label: contract.tenantLabel, value: contract.tenant },
-    { icon: <Building2 className="w-4 h-4" />, label: contract.landlordLabel, value: contract.landlord },
-    { icon: <Banknote className="w-4 h-4" />, label: contract.rentLabel, value: contract.rent != null ? fmt(contract.rent) : null },
-    { icon: <CreditCard className="w-4 h-4" />, label: "Барьцаа", value: contract.deposit != null ? fmt(contract.deposit) : null },
-    { icon: <Calendar className="w-4 h-4" />, label: "Эхлэх огноо", value: contract.startDate },
-    { icon: <Calendar className="w-4 h-4" />, label: "Дуусах огноо", value: contract.endDate },
-    { icon: <Clock className="w-4 h-4" />, label: "Төлбөрийн өдөр", value: contract.payDay != null ? `Сарын ${contract.payDay}-нд` : null },
+    { icon: User, label: contract.tenantLabel, value: contract.tenant },
+    { icon: Building2, label: contract.landlordLabel, value: contract.landlord },
+    { icon: Banknote, label: contract.rentLabel, value: contract.rent != null ? fmt(contract.rent) : null },
+    { icon: CreditCard, label: "Барьцаа", value: contract.deposit != null ? fmt(contract.deposit) : null },
+    { icon: Calendar, label: "Эхлэх огноо", value: contract.startDate },
+    { icon: Calendar, label: "Дуусах огноо", value: contract.endDate },
+    { icon: Clock, label: "Төлбөрийн өдөр", value: contract.payDay != null ? `Сарын ${contract.payDay}-нд` : null },
   ].filter((row) => row.value != null && row.value !== "—");
 
   return (
-    /* From lg up the verdict and the correction letter stay pinned in a left
-       column while the findings/strengths/meta tabs scroll beside them. */
-    <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-6 lg:space-y-0 lg:items-start">
-      <div className="space-y-5 lg:sticky lg:top-24">
-      {/* score header */}
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <Eyebrow className="mb-4">Нийцлийн дүгнэлт</Eyebrow>
-        <div className="flex items-center gap-5">
-          {contract.score != null ? (
-            <ScoreRing score={contract.score} size={120} />
-          ) : (
-            <div className="flex size-[120px] shrink-0 items-center justify-center rounded-full border-[10px] border-muted text-2xl font-bold text-muted-foreground">
-              —
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-foreground leading-tight">
-              {contract.score != null ? scoreLabel(contract.score) : "Аудит хийгдээгүй"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed break-words">
+    <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-6 lg:space-y-0 lg:items-start">
+      <div className="space-y-6 lg:sticky lg:top-24">
+        <Card>
+          {/* The contract's name identifies the page and so leads the card.
+              It used to sit below the score as muted body text, which left the
+              top bar ("Аудит дүн") as the only page identity — arriving here
+              from a notification, you could not tell which contract this was
+              without hunting. The verdict stays the loudest thing on screen:
+              it is the answer the reader came for. */}
+          <CardHeader>
+            <CardDescription className="break-words">
               {contract.label}
-            </p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {contract.typeLabel && (
-                <div className="flex items-center gap-1.5 bg-muted text-muted-foreground text-xs font-medium px-2.5 py-1 rounded-full">
-                  <FileText className="w-3 h-3" />
-                  {contract.typeLabel}
-                </div>
-              )}
-              <div className="flex items-center gap-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs font-medium px-2.5 py-1 rounded-full">
-                <XCircle className="w-3 h-3" />
-                {highCount} өндөр
+            </CardDescription>
+            <CardTitle className="text-2xl">
+              {contract.score != null ? scoreLabel(contract.score) : "Аудит хийгдээгүй"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {contract.score != null && (
+              <div className="space-y-2">
+                {/* "/ 100" has to touch the number. Pushed to the far edge by
+                    justify-between it sat ~300px away, so the eye read a bare
+                    "4" — indistinguishable from the finding counts below it,
+                    and with no clue whether 4 is good or bad. */}
+                <p className="flex items-baseline gap-1">
+                  <span className="text-3xl font-semibold tabular-nums">
+                    {contract.score}
+                  </span>
+                  <span className="text-muted-foreground text-sm">/ 100</span>
+                  <span className="text-muted-foreground ml-1 text-sm">
+                    нийцлийн оноо
+                  </span>
+                </p>
+                {/* The bar is `role="progressbar"`, so without a name a screen
+                    reader announces a bare number with no subject. And the
+                    default value text is a percentage — this is a score out of
+                    100 points, not 46% of anything. */}
+                <Progress
+                  value={contract.score}
+                  aria-label="Нийцлийн оноо"
+                  getAriaValueText={(_, v) => `100-аас ${v ?? 0} оноо`}
+                />
               </div>
-              <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-medium px-2.5 py-1 rounded-full">
-                <AlertTriangle className="w-3 h-3" />
-                {medCount} дунд
-              </div>
-              <div className="flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium px-2.5 py-1 rounded-full">
-                <CheckCircle2 className="w-3 h-3" />
-                {strengths.length} давуу тал
-              </div>
-            </div>
-          </div>
-        </div>
+            )}
+
+            {contract.score == null && <RunAudit contract={contract} />}
+
+            {contract.typeLabel && (
+              <Badge variant="secondary">{contract.typeLabel}</Badge>
+            )}
+
+            <Separator />
+
+            {/* Severity breakdown of the findings, and only that — the three
+                numbers have to sum to the Эрсдэл tab's count. "Давуу тал" used
+                to sit in this row styled identically to two risk counts, which
+                read as a third severity and left the sum four short. It has
+                its own tab; it does not belong in a risk tally. */}
+            <dl className="grid grid-cols-3 gap-2 text-center">
+              <Tally n={highCount} label="Өндөр" />
+              <Tally n={medCount} label="Дунд" />
+              <Tally n={lowCount} label="Бага" />
+            </dl>
+          </CardContent>
+        </Card>
+
+        {/* Turn the audit into an action: a ready-to-send correction letter. */}
+        {highCount + medCount > 0 && (
+          <ProposalCard
+            contractId={contract.id}
+            issueCount={highCount + medCount}
+            initialProposal={contract.proposal}
+          />
+        )}
       </div>
 
-      {/* Turn the audit into an action: a ready-to-send correction letter. */}
-      {highCount + medCount > 0 && (
-        <ProposalCard
-          contractId={contract.id}
-          issueCount={highCount + medCount}
-          initialProposal={contract.proposal}
-        />
-      )}
-      </div>
+      <Tabs defaultValue="findings">
+        <TabsList variant="line">
+          <TabsTrigger value="findings">
+            Эрсдэл
+            <span className="text-muted-foreground tabular-nums">
+              {findings.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="strengths">
+            Давуу тал
+            <span className="text-muted-foreground tabular-nums">
+              {strengths.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="meta">
+            Мэдээлэл
+            <span className="text-muted-foreground tabular-nums">
+              {metaRows.length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="space-y-5">
-      {/* tabs */}
-      <div className="flex gap-1 rounded-2xl bg-muted p-1 lg:max-w-md">
-        {(["findings", "strengths", "meta"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 text-xs font-semibold py-2 rounded-lg transition-all ${
-              tab === t
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground"
-            }`}
-          >
-            {t === "findings" ? "Анхааруулга" : t === "strengths" ? "Давуу тал" : "Мэдээлэл"}
-          </button>
-        ))}
-      </div>
-
-      {tab === "findings" && (
-        <div className="space-y-2.5">
-          {findings.length > 0 ? (
-            findings.map((f) => <FindingRow key={f.id} f={f} />)
+        <TabsContent value="findings" className="space-y-5">
+          {findingGroups.length > 0 ? (
+            findingGroups.map((group) => (
+              <section key={group.severity} className="space-y-2">
+                {/* The severity is stated once, for the whole group, instead of
+                    on all sixteen rows. Six identical red pills stacked down a
+                    list carry no information — they only differ where the group
+                    changes, so that is the one place worth marking. */}
+                <h3 className="flex items-baseline gap-2 px-1 text-sm font-semibold">
+                  <span className={group.severity === "high" ? "text-destructive" : undefined}>
+                    {severityBadge(group.severity).label}
+                  </span>
+                  <span className="text-muted-foreground font-normal tabular-nums">
+                    {group.items.length}
+                  </span>
+                </h3>
+                <Card className="py-0">
+                  <Accordion className="px-4">
+                    {group.items.map((f) => (
+                      <FindingItem key={f.id} f={f} />
+                    ))}
+                  </Accordion>
+                </Card>
+              </section>
+            ))
           ) : (
-            <p className="rounded-2xl border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
-              Анхааруулга илрээгүй.
-            </p>
+            <Empty>Эрсдэлтэй заалт илрээгүй.</Empty>
           )}
-        </div>
-      )}
+        </TabsContent>
 
-      {tab === "strengths" && (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            Таны эрхийг хамгаалсан зүйлүүд:
-          </p>
+        <TabsContent value="strengths">
           {strengths.length > 0 ? (
-            <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 lg:items-start">
-            {strengths.map((s, i) => (
-              <div
-                key={i}
-                className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/30"
-              >
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-foreground leading-relaxed">{s}</p>
-              </div>
-            ))}
+            <div className="grid gap-3 lg:grid-cols-2">
+              {strengths.map((s, i) => (
+                <Card key={i} size="sm">
+                  <CardContent className="flex gap-3">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <p className="leading-relaxed">{s}</p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
-              Тэмдэглэхүйц давуу тал олдсонгүй.
-            </p>
+            <Empty>Тэмдэглэхүйц давуу тал олдсонгүй.</Empty>
           )}
-        </div>
-      )}
+        </TabsContent>
 
-      {tab === "meta" && (
-        metaRows.length > 0 ? (
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            {metaRows.map((row, i, arr) => (
-              <div
-                key={i}
-                className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? "border-b border-border" : ""}`}
-              >
-                <span className="text-muted-foreground shrink-0">{row.icon}</span>
-                <span className="text-sm text-muted-foreground w-28 shrink-0">{row.label}</span>
-                <span className="text-sm font-medium text-foreground flex-1 text-right">{row.value}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="rounded-2xl border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
-            Гэрээнээс мэдээлэл салгаж чадсангүй.
-          </p>
-        )
-      )}
-      </div>
+        <TabsContent value="meta">
+          {metaRows.length > 0 ? (
+            <Card className="py-0">
+              <dl>
+                {metaRows.map((row, i) => (
+                  <div key={i}>
+                    {i > 0 && <Separator />}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <row.icon className="size-4 shrink-0 text-muted-foreground" />
+                      <dt className="flex-1 text-muted-foreground">{row.label}</dt>
+                      <dd className="font-medium">{row.value}</dd>
+                    </div>
+                  </div>
+                ))}
+              </dl>
+            </Card>
+          ) : (
+            <Empty>Гэрээнээс мэдээлэл салгаж чадсангүй.</Empty>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+/**
+ * Findings arrive as "4.2-р заалт — Барьцаа буцаан олгохгүй байх нөхцөл": a
+ * short clause reference, an em dash, then the plain-language title. The
+ * length guard keeps a title that merely happens to contain a dash from being
+ * mistaken for a reference.
+ */
+function splitClause(clause: string) {
+  const i = clause.indexOf("—");
+  const ref = i > 0 ? clause.slice(0, i).trim() : "";
+  const title = i > 0 ? clause.slice(i + 1).trim() : "";
+  if (!title || ref.length > 28) return { ref: null, title: clause };
+  return { ref, title };
+}
+
+/** Stock badge variants only — "high" is the one severity that gets colour. */
+function severityBadge(s: AuditFinding["severity"]) {
+  switch (s) {
+    case "high":
+      return { variant: "destructive" as const, label: "Өндөр эрсдэл" };
+    case "medium":
+      return { variant: "secondary" as const, label: "Дунд эрсдэл" };
+    case "low":
+      return { variant: "outline" as const, label: "Бага эрсдэл" };
+    case "info":
+      return { variant: "outline" as const, label: "Мэдээлэл" };
+  }
+}
+
+/**
+ * One finding as an accordion row. Keeps the statute lookup from the previous
+ * build — tapping the citation fetches the actual article text, which is the
+ * proof a plain chatbot cannot show.
+ */
+function FindingItem({ f }: { f: AuditFinding }) {
+  const { ref, title } = splitClause(f.clause);
+
+  const canOpenLaw =
+    f.lawName != null && f.articleRef != null && /\d/.test(f.articleRef);
+
+  // undefined = not fetched yet, null = fetched but not found.
+  const [lawOpen, setLawOpen] = useState(false);
+  const [law, setLaw] = useState<LegalArticle | null>();
+  const [lawLoading, setLawLoading] = useState(false);
+  const [lawError, setLawError] = useState<string | null>(null);
+
+  // Opening the statute has to be undoable — the text runs long, and a panel
+  // that only ever opens buries the rest of the finding under it. Fetch once,
+  // then the toggle is free.
+  async function toggleLaw() {
+    const next = !lawOpen;
+    setLawOpen(next);
+    if (!next || law !== undefined || lawLoading) return;
+    setLawLoading(true);
+    setLawError(null);
+    try {
+      setLaw(await fetchLegalArticle(f.lawName!, f.articleRef!));
+    } catch (e) {
+      setLawError(e instanceof Error ? e.message : "Татаж чадсангүй");
+    } finally {
+      setLawLoading(false);
+    }
+  }
+
+  return (
+    <AccordionItem value={String(f.id)}>
+      <AccordionTrigger className="gap-3 no-underline hover:no-underline">
+        <div className="flex flex-1 flex-col items-start gap-1">
+          {/* The severity badge moved to the group heading. What's left is the
+              clause reference — the one thing that differs row to row and the
+              thing a reader cross-references against their own document. */}
+          {ref && <span className="text-muted-foreground text-xs">{ref}</span>}
+          <span className="font-medium">{title}</span>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="space-y-3">
+        <p className="leading-relaxed">{f.explanation}</p>
+
+        <Card size="sm" className="bg-muted/40">
+          <CardContent>
+            <button
+              onClick={canOpenLaw ? toggleLaw : undefined}
+              disabled={!canOpenLaw}
+              aria-expanded={canOpenLaw ? lawOpen : undefined}
+              className="flex w-full items-center gap-2 text-left disabled:cursor-default"
+            >
+              <Scale className="size-4 shrink-0 text-muted-foreground" />
+              <span className="flex-1 font-medium">{f.article}</span>
+              {lawLoading ? (
+                <Loader2 className="size-4 shrink-0 animate-spin" />
+              ) : (
+                canOpenLaw && (
+                  <>
+                    <span className="text-xs text-muted-foreground">
+                      Эх бичвэр
+                    </span>
+                    <ChevronDown
+                      className={`size-4 shrink-0 text-muted-foreground transition-transform ${
+                        lawOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </>
+                )
+              )}
+            </button>
+
+            {lawOpen && lawError && (
+              <p className="mt-2 text-xs text-destructive">{lawError}</p>
+            )}
+            {lawOpen && law && (
+              <div className="mt-3 space-y-1.5">
+                {law.sectionTitle && (
+                  <p className="text-xs font-semibold">{law.sectionTitle}</p>
+                )}
+                <p className="max-h-64 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                  {law.content}
+                </p>
+                <p className="pt-1 text-xs text-muted-foreground">
+                  Эх сурвалж: {law.lawName}
+                </p>
+              </div>
+            )}
+            {lawOpen && law === null && !lawLoading && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Энэ зүйлийн эх бичвэр мэдлэгийн санд олдсонгүй.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {f.confidenceLevel && (
+          <p className="text-xs text-muted-foreground">
+            AI-н итгэл:{" "}
+            {f.confidenceLevel === "high"
+              ? "Өндөр"
+              : f.confidenceLevel === "medium"
+                ? "Дунд"
+                : "Бага"}
+          </p>
+        )}
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+/**
+ * The way back from a failed or never-run audit. Without it a contract whose
+ * audit errored is a dead end: the file is stored, the credits were refunded,
+ * and the only path forward was to upload the same document again.
+ */
+function RunAudit({ contract }: { contract: ContractVM }) {
+  const router = useRouter();
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    setRunning(true);
+    setError(null);
+    try {
+      await auditContract(contract.id);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Шинжилгээ амжилтгүй боллоо");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={run}
+        disabled={running}
+        className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60"
+      >
+        {running ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Sparkles className="size-4" />
+        )}
+        {running ? "Шинжилж байна…" : "Шинжилгээг ажиллуулах"}
+      </button>
+      <p className="text-muted-foreground text-xs">
+        {contract.pages != null
+          ? `${contract.pages} кредит зарцуулна. Амжилтгүй бол кредит буцаана.`
+          : "Амжилтгүй бол кредит буцаана."}
+      </p>
+      {error && (
+        <p className="text-destructive flex items-start gap-1.5 text-xs">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Tally({ n, label }: { n: number; label: string }) {
+  return (
+    <div className="flex flex-col-reverse gap-1">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="text-lg font-semibold tabular-nums">{n}</dd>
+    </div>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <Card>
+      <CardContent className="py-8 text-center text-muted-foreground">
+        {children}
+      </CardContent>
+    </Card>
   );
 }

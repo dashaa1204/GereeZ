@@ -19,9 +19,13 @@ export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] md:max-w-[600px] bg-card/95 backdrop-blur-md border-t border-border z-30 lg:hidden">
       <div className="flex">
         {tabItems.map((t) => {
-          // Active only on the exact tab route — audit (/contracts/[id]) and
-          // payment are sub-screens with no active tab, like the original design.
-          const active = pathname === t.href;
+          // A sub-screen keeps its parent tab lit — the audit at
+          // /contracts/[id] is still "Гэрээ" — so the bar always answers
+          // "where am I?" instead of going blank one level in. Matches how
+          // TopNav lights the contracts tab on desktop.
+          const active =
+            pathname === t.href ||
+            (t.href !== DASHBOARD_PATH && pathname.startsWith(`${t.href}/`));
           const Icon = t.icon;
           const badge = t.href === "/alerts" ? unreadCount : 0;
           return (
@@ -36,8 +40,13 @@ export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
               <span className={`text-xs transition-colors ${active ? "text-brand font-semibold" : "text-muted-foreground font-medium"}`}>
                 {t.label}
               </span>
+              {/* `text-destructive-foreground` was a dead class — nothing
+                  defines that token, so the count inherited the nav's ink and
+                  sat at 4.11:1 on red. The filled-surface red carries white at
+                  6.6:1 and, unlike the signal red, does not lift in dark mode
+                  into the band where no foreground passes. */}
               {badge > 0 && (
-                <span className="absolute top-2 right-1/2 translate-x-3 size-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute top-2 right-1/2 translate-x-3 size-4 bg-[var(--risk-high-surface)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {badge}
                 </span>
               )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -11,19 +12,28 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import {
+  CONTRACT_FILTERS,
+  FILTER_EMPTY_HINT,
+  matchesFilter,
+  type ContractFilter,
+} from "@/lib/contract-filters";
 import { deleteContract } from "@/lib/services/contracts.client";
 import type { ContractVM } from "@/lib/view-models";
-import { fmt, scoreColor } from "../display";
+import { fmt, scoreColor, scoreInk } from "../display";
 import { Eyebrow, Panel, PanelGlow } from "../kit";
 
 export function ContractsScreen({
   contracts,
   credits,
+  filter = "all",
 }: {
   contracts: ContractVM[];
   credits: number;
+  filter?: ContractFilter;
 }) {
   const router = useRouter();
+  const visible = contracts.filter((c) => matchesFilter(c, filter));
   const onPayment = () => router.push("/payment");
   // Two-tap delete: first tap arms the confirm state, second tap deletes.
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -100,23 +110,60 @@ export function ContractsScreen({
         </div>
       </Panel>
 
-      <Eyebrow className="px-0.5">Бүх гэрээ ({contracts.length})</Eyebrow>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Eyebrow className="px-0.5">
+          {filter === "all" ? "Бүх гэрээ" : "Шүүсэн гэрээ"} ({visible.length})
+        </Eyebrow>
+        {/* Which subset is on screen has to be visible and reversible: the
+            active chip says where you are, the others are one tap out. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {CONTRACT_FILTERS.map((f) => {
+            const active = f.value === filter;
+            const count = contracts.filter((c) =>
+              matchesFilter(c, f.value),
+            ).length;
+            return (
+              <Link
+                key={f.value}
+                href={f.value === "all" ? "/contracts" : `/contracts?filter=${f.value}`}
+                aria-current={active ? "page" : undefined}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  active
+                    ? "bg-brand/12 text-brand"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {f.label}
+                <span className="ml-1.5 tabular-nums opacity-60">{count}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
 
       {deleteError && (
         <p className="text-sm text-red-600 dark:text-red-400 px-0.5">{deleteError}</p>
       )}
 
-      {contracts.length === 0 && (
+      {visible.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-card px-4 py-10 text-center">
           <FileText className="mx-auto w-8 h-8 text-muted-foreground/50" />
           <p className="mt-3 text-sm font-medium text-muted-foreground">Гэрээ байхгүй байна</p>
-          <p className="mt-1 text-xs text-muted-foreground">Нүүр хуудаснаас гэрээгээ оруулна уу.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{FILTER_EMPTY_HINT[filter]}</p>
+          {filter !== "all" && (
+            <Link
+              href="/contracts"
+              className="text-brand mt-3 inline-block text-xs font-semibold hover:underline"
+            >
+              Бүх гэрээг харах
+            </Link>
+          )}
         </div>
       )}
 
       {/* one column on the phone, a card grid once there is room for it */}
       <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0 lg:items-start">
-      {contracts.map((c) => {
+      {visible.map((c) => {
         const cfg = statusCfg(c.status);
         if (!c.paid) {
           return (
@@ -191,7 +238,9 @@ export function ContractsScreen({
                   style={{ width: `${c.score ?? 0}%`, backgroundColor: scoreColor(c.score ?? 0) }}
                 />
               </div>
-              <span className="text-xs font-bold" style={{ color: scoreColor(c.score ?? 0) }}>{c.score ?? "—"}</span>
+              {/* The meter beside it carries the signal colour; the number is
+                  12px text and needs the ink, which clears 4.5:1 on the card. */}
+              <span className="text-xs font-bold" style={{ color: scoreInk(c.score ?? 0) }}>{c.score ?? "—"}</span>
             </div>
             {(c.rent != null || c.deposit != null) && (
               <div className="flex items-center justify-between text-xs text-muted-foreground">
