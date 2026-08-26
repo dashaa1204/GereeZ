@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Coins,
   Loader2,
+  RotateCw,
   Sparkles,
   Upload,
 } from "lucide-react";
@@ -133,6 +134,10 @@ export function ContractUploadFlow() {
   const retryable =
     state === "error" && pendingContractId != null && !permanentError;
   const showGate = quote != null && (state === "quote" || retryable);
+  // The upload landed and the pricing didn't, which used to fall through to the
+  // drop zone — the one control that starts the whole thing over. The contract
+  // is already there; only its price is missing.
+  const showQuoteRetry = retryable && quote == null;
 
   // The audit runs as long as it runs, so the ring reports elapsed time rather
   // than a fabricated percentage of an unknown total.
@@ -180,6 +185,38 @@ export function ContractUploadFlow() {
     setShake("zone");
     triggerHaptic("error");
     setTimeout(() => setShake(null), 300);
+  }, []);
+
+  /**
+   * Price an already-uploaded contract. Its own step, because a quote that
+   * fails has to be repeatable: the file is stored and the contract row exists,
+   * so re-picking the file would upload a second copy and leave the first one
+   * stranded — one abandoned row and storage object per attempt.
+   */
+  const runQuote = useCallback(
+    async (contractId: string) => {
+      setError(null);
+      setPermanentError(false);
+      setState("quoting");
+      try {
+        setQuote(await quoteContract(contractId));
+        setState("quote");
+        triggerHaptic("light");
+      } catch (err) {
+        fail(err, "Үнэ тооцоход алдаа гарлаа");
+      }
+    },
+    [fail],
+  );
+
+  /** Abandon this attempt and start over with a different document. */
+  const chooseAnotherFile = useCallback(() => {
+    setError(null);
+    setPermanentError(false);
+    setQuote(null);
+    setPendingContractId(null);
+    setState("idle");
+    inputRef.current?.click();
   }, []);
 
   const processFiles = useCallback(
@@ -247,17 +284,12 @@ export function ContractUploadFlow() {
 
         const contract = await uploadContract(file);
         setPendingContractId(contract.id);
-
-        setState("quoting");
-        const nextQuote = await quoteContract(contract.id);
-        setQuote(nextQuote);
-        setState("quote");
-        triggerHaptic("light");
+        await runQuote(contract.id);
       } catch (err) {
         fail(err, "Алдаа гарлаа");
       }
     },
-    [requireConsent, fail],
+    [requireConsent, fail, runQuote],
   );
 
   const confirmAudit = useCallback(async () => {
@@ -392,6 +424,32 @@ export function ContractUploadFlow() {
                 </button>
               </>
             )}
+            {/* Either gate can be a dead end for a document the pipeline will
+                keep refusing, so both keep a way out that isn't the browser's
+                back button. */}
+            <AnotherFileLink onClick={chooseAnotherFile} />
+          </div>
+        </SettleIn>
+      ) : showQuoteRetry ? (
+        <SettleIn>
+          <div className="border-brand/20 bg-brand/5 rounded-2xl border p-5">
+            <div className="text-brand flex items-center gap-2 text-sm font-semibold">
+              <AlertTriangle className="size-4" />
+              Үнийн санал гарсангүй
+            </div>
+            <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
+              Файл хадгалагдсан. Хуудсыг нь тоолж чадсангүй — дахин оролдоход
+              шинээр файл оруулах шаардлагагүй.
+            </p>
+            <button
+              type="button"
+              onClick={() => runQuote(pendingContractId!)}
+              className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
+            >
+              <RotateCw className="size-4" />
+              Дахин оролдох
+            </button>
+            <AnotherFileLink onClick={chooseAnotherFile} />
           </div>
         </SettleIn>
       ) : (
@@ -541,5 +599,18 @@ export function ContractUploadFlow() {
         </SettleIn>
       )}
     </>
+  );
+}
+
+/** The escape hatch out of either gate: give up on this file, pick another. */
+function AnotherFileLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-muted-foreground mt-3 w-full text-center text-xs hover:underline"
+    >
+      Өөр файл сонгох
+    </button>
   );
 }
