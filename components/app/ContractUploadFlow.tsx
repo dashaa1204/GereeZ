@@ -122,8 +122,9 @@ export function ContractUploadFlow() {
   const ringComplete = state === "success" && progress >= 100;
   const showRing = isBusy || state === "success";
   // The gate survives a failed audit: the file is already uploaded and the
-  // credits were refunded server-side, so the way out is one more attempt —
-  // not re-picking the same file and paying the upload over again.
+  // credits are back (every failing path in the audit route refunds), so the
+  // way out is one more attempt — not re-picking the same file and paying the
+  // upload over again.
   const retryable = state === "error" && pendingContractId != null;
   const showGate = quote != null && (state === "quote" || retryable);
 
@@ -323,8 +324,8 @@ export function ContractUploadFlow() {
             </div>
             {retryable && (
               <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
-                Файл хадгалагдсан, кредит буцаагдсан. Дахин оролдоход шинээр
-                файл оруулах шаардлагагүй.
+                Файл хадгалагдсан, кредит зарцуулагдаагүй. Дахин оролдоход
+                шинээр файл оруулах шаардлагагүй.
               </p>
             )}
             <dl className="mt-3 space-y-1.5 text-sm">

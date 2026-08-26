@@ -284,7 +284,7 @@ function auditStateAlerts(contracts: Contract[]): Omit<AlertVM, "read">[] {
         severity: "high",
         contractName: c.file_name,
         title: "Шинжилгээ амжилтгүй боллоо",
-        body: "Гэрээг шалгаж чадаагүй тул кредит буцаагдсан. Дахин оролдоно уу.",
+        body: "Гэрээг шалгаж чадаагүй тул кредит зарцуулагдаагүй. Дахин оролдоно уу.",
         date: updated,
         href: contractHref(c.id),
       });

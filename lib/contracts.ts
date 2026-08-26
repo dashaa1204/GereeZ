@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "./supabase-server";
 import { getDemoContract, isDemoUiEnabled } from "./demo-ui";
+import { recoverStrandedAudits } from "./stranded-audits";
 import type { AuditAlert, Contract } from "./types/contract";
 
 export interface DashboardMetrics {
@@ -101,6 +102,8 @@ export async function getDashboardData(): Promise<DashboardData> {
   if (isDemoUiEnabled()) {
     return buildDashboardData([getDemoContract()]);
   }
-  const contracts = await fetchContracts();
+  // Audits killed mid-flight (see lib/stranded-audits.ts) can only be repaired
+  // from a later read — this is that read.
+  const contracts = await recoverStrandedAudits(await fetchContracts());
   return buildDashboardData(contracts);
 }
