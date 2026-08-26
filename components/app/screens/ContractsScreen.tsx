@@ -219,6 +219,19 @@ export function ContractsScreen({
                   <RotateCw className="size-4" />
                   Дахин шинжлэх
                 </button>
+                {/* The card claims the file is still there; this is what makes
+                    that checkable rather than something to take on trust. */}
+                {c.hasFile && (
+                  <a
+                    href={`/api/contracts/${c.id}/file`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground inline-flex items-center gap-1.5 text-xs hover:underline"
+                  >
+                    <FileText className="size-3.5" />
+                    Файлыг харах
+                  </a>
+                )}
               </div>
             </div>
           );
@@ -247,6 +260,19 @@ export function ContractsScreen({
                     <CreditCard className="w-4 h-4" />
                     {c.pages != null ? `${c.pages} кредитээр нээх` : "Кредитээр нээх"}
                   </button>
+                  {/* The audit is what's locked, not the document — the user
+                      uploaded that themselves and can read it whenever. */}
+                  {c.hasFile && (
+                    <a
+                      href={`/api/contracts/${c.id}/file`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground inline-flex items-center gap-1.5 text-xs hover:underline"
+                    >
+                      <FileText className="size-3.5" />
+                      Файлыг харах
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

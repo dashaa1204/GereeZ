@@ -11,6 +11,8 @@ import {
   ChevronDown,
   Clock,
   CreditCard,
+  Download,
+  FileText,
   Loader2,
   RotateCw,
   Scale,
@@ -151,6 +153,36 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
               <Tally n={medCount} label="Дунд" />
               <Tally n={lowCount} label="Бага" />
             </dl>
+
+            {/* The document every finding above is about. The bucket is
+                private, so this route is the only way back to it — and a
+                reader who wants to check a quoted clause against the contract
+                had, until now, nowhere to go. Rows with no stored file (seeded
+                ones, and anything from before the bucket) get no link rather
+                than one that can only fail. */}
+            {contract.hasFile && (
+              <>
+                <Separator />
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <a
+                    href={`/api/contracts/${contract.id}/file`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand inline-flex items-center gap-1.5 text-xs font-medium hover:underline"
+                  >
+                    <FileText className="size-3.5" />
+                    Эх файлыг харах
+                  </a>
+                  <a
+                    href={`/api/contracts/${contract.id}/file?download=1`}
+                    className="text-muted-foreground inline-flex items-center gap-1.5 text-xs hover:underline"
+                  >
+                    <Download className="size-3.5" />
+                    Татах
+                  </a>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

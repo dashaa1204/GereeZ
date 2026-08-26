@@ -24,6 +24,7 @@ function contract(overrides: Partial<ContractVM>): ContractVM {
     score: null,
     status: "pending",
     paid: false,
+    hasFile: false,
     pages: null,
     summary: null,
     findings: [],
