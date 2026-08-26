@@ -100,8 +100,9 @@ NEXT_PUBLIC_DEMO_UI=false
 For a fresh project, run the combined script `supabase/setup-all.sql` in the
 Supabase SQL Editor — it covers everything: contracts + private bucket +
 per-user RLS, the pgvector legal store, site content, rate limits, credits
-(010), contract tracking dates (011), alert read-state (012), and law
-version stamps for notifications (013).
+(010), contract tracking dates (011), alert read-state (012), law version
+stamps for notifications (013), and the updated_at trigger plus audit
+timestamp (014).
 
 For an existing project, apply only the new numbered files from
 `supabase/migrations/` in order.

@@ -25,6 +25,7 @@ function makeContract(
     start_date: null,
     end_date: null,
     page_count: null,
+    audited_at: null,
     created_at: hoursAgo(48),
     updated_at,
   };

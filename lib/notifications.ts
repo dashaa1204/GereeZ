@@ -278,7 +278,8 @@ function auditStateAlerts(contracts: Contract[]): Omit<AlertVM, "read">[] {
       const days = daysUntil(updated);
       if (days != null && -days > FAILED_AUDIT_WINDOW_DAYS) continue;
       out.push({
-        // A retry that fails again bumps updated_at, so it comes back unread.
+        // A retry that fails again bumps updated_at (migration 014), so it
+        // comes back unread rather than staying hidden behind the old mark.
         id: `a-${c.id}-failed-${updated}`,
         kind: "audit",
         severity: "high",
@@ -351,7 +352,10 @@ function lawUpdateAlerts(
 
   for (const c of contracts) {
     if (c.status !== "completed") continue;
-    const auditedAt = Date.parse(c.updated_at ?? "");
+    // `audited_at` is when the audit ran; `updated_at` is when the row last
+    // changed, which a saved correction letter or a cached page count also
+    // moves. Fall back to it only for rows audited before that column existed.
+    const auditedAt = Date.parse(c.audited_at ?? c.updated_at ?? "");
     if (Number.isNaN(auditedAt)) continue;
 
     const cited = new Set(

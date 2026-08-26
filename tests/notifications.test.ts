@@ -18,6 +18,7 @@ function makeContract(overrides: Partial<Contract> = {}): Contract {
     start_date: null,
     end_date: null,
     page_count: null,
+    audited_at: null,
     created_at: "2026-06-01T00:00:00Z",
     updated_at: "2026-06-15T08:00:00Z",
     ...overrides,
@@ -256,6 +257,18 @@ describe("law-update alerts", () => {
       lawUpdatedAt: new Map([["Иргэний хууль", "2026-06-01T00:00:00Z"]]),
     });
     expect(alerts.some((a) => a.kind === "law")).toBe(false);
+  });
+
+  it("dates the audit from audited_at, not from a later write to the row", () => {
+    // Saving a correction letter writes to the contract, which moves
+    // updated_at past the ingest. The audit itself still predates the new law
+    // text, so the alert has to survive that write.
+    const withLetter = audited([makeFinding({ lawName: "Иргэний хууль" })]);
+    const alerts = feed(
+      [{ ...withLetter, audited_at: "2026-06-15T08:00:00Z", updated_at: "2026-06-28T09:00:00Z" }],
+      { lawUpdatedAt: new Map([["Иргэний хууль", "2026-06-20T00:00:00Z"]]) },
+    );
+    expect(alerts.some((a) => a.kind === "law")).toBe(true);
   });
 
   it("says nothing about a law the audit never cited", () => {
