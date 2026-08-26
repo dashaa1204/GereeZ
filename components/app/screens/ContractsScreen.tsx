@@ -84,6 +84,8 @@ export function ContractsScreen({
     if (s === "compliant") return { label: "Нийцтэй", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40", dot: "bg-emerald-500" };
     if (s === "warning") return { label: "Анхаарах", color: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40", dot: "bg-amber-500" };
     if (s === "pending") return { label: "Хүлээгдэж буй", color: "text-muted-foreground bg-muted", dot: "bg-muted-foreground" };
+    // Waiting for the user and waiting for the machine are different waits.
+    if (s === "running") return { label: "Шинжилж байна", color: "text-brand bg-brand/10", dot: "bg-brand animate-pulse" };
     // Failed and risky are both red because both want the user, but the two
     // labels have to stay apart: one contract was measured and found wanting,
     // the other was never measured at all.

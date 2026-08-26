@@ -55,7 +55,7 @@ export interface ContractVM {
   endDate: string;
   payDay: number | null;
   score: number | null;
-  status: "compliant" | "warning" | "risk" | "pending" | "failed";
+  status: "compliant" | "warning" | "risk" | "pending" | "failed" | "running";
   /** Audited (completed) contracts are "paid"/unlocked; others are locked. */
   paid: boolean;
   /**
@@ -118,6 +118,10 @@ function statusOf(c: Contract): ContractVM["status"] {
   // user starts it again. Collapsing the two into "pending" left the list
   // telling them to wait for a run that had already given up.
   if (c.status === "failed") return "failed";
+  // An audit that is under way right now. The stranded sweep has already
+  // turned any dead `processing` row into a failure by the time we map it,
+  // so this really is a live run and not a row nobody is working on.
+  if (c.status === "processing") return "running";
   if (c.status !== "completed" || c.compliance_score == null) return "pending";
   if (c.compliance_score >= 75) return "compliant";
   if (c.compliance_score >= 50) return "warning";
