@@ -12,6 +12,7 @@ import {
   Clock,
   CreditCard,
   Loader2,
+  RotateCw,
   Scale,
   Sparkles,
   User,
@@ -93,8 +94,15 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
             <CardDescription className="break-words">
               {contract.label}
             </CardDescription>
+            {/* The verdict, or — when there isn't one — which kind of "no
+                verdict" this is: an audit that has not been run yet, and one
+                that ran and failed, need different things from the reader. */}
             <CardTitle className="text-2xl">
-              {contract.score != null ? scoreLabel(contract.score) : "Аудит хийгдээгүй"}
+              {contract.score != null
+                ? scoreLabel(contract.score)
+                : contract.status === "failed"
+                  ? "Шинжилгээ амжилтгүй боллоо"
+                  : "Аудит хийгдээгүй"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -403,6 +411,12 @@ function RunAudit({ contract }: { contract: ContractVM }) {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const retry = contract.status === "failed";
+  const cost =
+    contract.pages != null ? `${contract.pages} кредит зарцуулна.` : null;
+  const hint = retry
+    ? ["Өмнөх оролдлогын кредит буцаагдсан.", cost].filter(Boolean).join(" ")
+    : [cost, "Амжилтгүй бол кредит буцаана."].filter(Boolean).join(" ");
 
   async function run() {
     setRunning(true);
@@ -427,16 +441,21 @@ function RunAudit({ contract }: { contract: ContractVM }) {
       >
         {running ? (
           <Loader2 className="size-4 animate-spin" />
+        ) : retry ? (
+          <RotateCw className="size-4" />
         ) : (
           <Sparkles className="size-4" />
         )}
-        {running ? "Шинжилж байна…" : "Шинжилгээг ажиллуулах"}
+        {running
+          ? "Шинжилж байна…"
+          : retry
+            ? "Дахин шинжлэх"
+            : "Шинжилгээг ажиллуулах"}
       </button>
-      <p className="text-muted-foreground text-xs">
-        {contract.pages != null
-          ? `${contract.pages} кредит зарцуулна. Амжилтгүй бол кредит буцаана.`
-          : "Амжилтгүй бол кредит буцаана."}
-      </p>
+      {/* Two sentences at most. A retry already knows credits come back — it
+          just got them — so it spends its second sentence on the price
+          instead of repeating the promise. */}
+      <p className="text-muted-foreground text-xs">{hint}</p>
       {error && (
         <p className="text-destructive flex items-start gap-1.5 text-xs">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />

@@ -4,12 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowRight,
   CreditCard,
   FileText,
   Loader2,
   Lock,
   Plus,
+  RotateCw,
   Trash2,
 } from "lucide-react";
 import {
@@ -82,7 +84,37 @@ export function ContractsScreen({
     if (s === "compliant") return { label: "Нийцтэй", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40", dot: "bg-emerald-500" };
     if (s === "warning") return { label: "Анхаарах", color: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40", dot: "bg-amber-500" };
     if (s === "pending") return { label: "Хүлээгдэж буй", color: "text-muted-foreground bg-muted", dot: "bg-muted-foreground" };
+    // Failed and risky are both red because both want the user, but the two
+    // labels have to stay apart: one contract was measured and found wanting,
+    // the other was never measured at all.
+    if (s === "failed") return { label: "Амжилтгүй", color: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40", dot: "bg-red-500" };
     return { label: "Эрсдэлтэй", color: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40", dot: "bg-red-500" };
+  };
+
+  // The identity block every card shape starts with: name, kind, expiry, the
+  // status pill and the delete control.
+  const cardHeader = (c: ContractVM) => {
+    const cfg = statusCfg(c.status);
+    return (
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground leading-snug truncate">{c.label}</p>
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            {c.typeLabel && (
+              <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md">
+                {c.typeLabel}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">Дуусах: {c.endDate}</span>
+          </div>
+        </div>
+        <div className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+          {cfg.label}
+        </div>
+        {deleteButton(c.id)}
+      </div>
+    );
   };
 
   return (
@@ -164,29 +196,39 @@ export function ContractsScreen({
       {/* one column on the phone, a card grid once there is room for it */}
       <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0 lg:items-start">
       {visible.map((c) => {
-        const cfg = statusCfg(c.status);
+        // A failed audit gets its own card. The locked one below would send the
+        // user to buy credits, which is the single thing that cannot help here:
+        // the audit refunded what it charged, and what is missing is a retry.
+        if (c.status === "failed") {
+          return (
+            <div key={c.id} className="bg-card border-destructive/30 space-y-3.5 rounded-2xl border p-5">
+              {cardHeader(c)}
+              <div className="border-destructive/20 bg-destructive/5 flex flex-col items-center gap-2.5 rounded-xl border p-4 text-center">
+                <AlertTriangle className="text-destructive size-7" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Шинжилгээ амжилтгүй боллоо</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Кредит зарцуулагдаагүй. Файл хадгалагдсан тул дахин оруулах
+                    шаардлагагүй.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push(`/contracts/${c.id}`)}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors"
+                >
+                  <RotateCw className="size-4" />
+                  Дахин шинжлэх
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         if (!c.paid) {
           return (
             <div key={c.id} className="bg-card border border-border rounded-2xl overflow-hidden">
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground leading-snug truncate">{c.label}</p>
-                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                      {c.typeLabel && (
-                        <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md">
-                          {c.typeLabel}
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground">Дуусах: {c.endDate}</span>
-                    </div>
-                  </div>
-                  <div className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                    {cfg.label}
-                  </div>
-                  {deleteButton(c.id)}
-                </div>
+              <div className="p-4 space-y-3">
+                {cardHeader(c)}
                 {/* lock overlay */}
                 <div className="rounded-xl bg-muted border border-border p-4 flex flex-col items-center gap-2.5 text-center">
                   <Lock className="w-7 h-7 text-muted-foreground" />
@@ -213,24 +255,7 @@ export function ContractsScreen({
 
         return (
           <div key={c.id} className="bg-card border border-border rounded-2xl p-5 space-y-3.5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground leading-snug truncate">{c.label}</p>
-                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  {c.typeLabel && (
-                    <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md">
-                      {c.typeLabel}
-                    </span>
-                  )}
-                  <span className="text-xs text-muted-foreground">Дуусах: {c.endDate}</span>
-                </div>
-              </div>
-              <div className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                {cfg.label}
-              </div>
-              {deleteButton(c.id)}
-            </div>
+            {cardHeader(c)}
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div

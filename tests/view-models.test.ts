@@ -87,5 +87,14 @@ describe("mapContract", () => {
     expect(mapContract(makeContract({ compliance_score: 60 })).status).toBe("warning");
     expect(mapContract(makeContract({ compliance_score: 30 })).status).toBe("risk");
     expect(mapContract(makeContract({ status: "pending", compliance_score: null })).status).toBe("pending");
+    expect(mapContract(makeContract({ status: "processing", compliance_score: null })).status).toBe("pending");
+  });
+
+  it("keeps a failed audit apart from one still waiting", () => {
+    // The list tells the user to wait for a "pending" contract. A failed one
+    // waits for nothing — it needs them to start it again.
+    const failed = mapContract(makeContract({ status: "failed", compliance_score: null }));
+    expect(failed.status).toBe("failed");
+    expect(failed.paid).toBe(false);
   });
 });
