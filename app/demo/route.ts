@@ -2,8 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   DEMO_ATTEMPT_PARAM,
   demoCredentials,
-  safeDemoRedirect,
+  demoRedirectUrl,
+  shouldSignInAsDemo,
 } from "@/lib/demo-user";
+import { DASHBOARD_PATH } from "@/lib/routes";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
@@ -14,8 +16,8 @@ export const runtime = "nodejs";
  * cold browser lands on the dashboard already signed in.
  */
 export async function GET(request: NextRequest) {
-  const target = new URL(
-    safeDemoRedirect(request.nextUrl.searchParams.get("next")),
+  const target = demoRedirectUrl(
+    request.nextUrl.searchParams.get("next"),
     request.nextUrl.origin,
   );
   const credentials = demoCredentials();
@@ -26,13 +28,26 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.auth.signInWithPassword(credentials);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (error) {
-    console.error("demo sign-in failed:", error.message);
-    const login = new URL("/login", request.nextUrl.origin);
-    login.searchParams.set("demo", "failed");
-    return NextResponse.redirect(login);
+  // Never replace a real user's session with the shared demo account.
+  if (user && !shouldSignInAsDemo(user.email)) {
+    return NextResponse.redirect(
+      new URL(DASHBOARD_PATH, request.nextUrl.origin),
+    );
+  }
+
+  if (!user) {
+    const { error } = await supabase.auth.signInWithPassword(credentials);
+
+    if (error) {
+      console.error("demo sign-in failed:", error.message);
+      const login = new URL("/login", request.nextUrl.origin);
+      login.searchParams.set("demo", "failed");
+      return NextResponse.redirect(login);
+    }
   }
 
   // Marks "the sign-in already happened here" so a cookie-less client bounces

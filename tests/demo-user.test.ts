@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   demoCredentials,
+  demoRedirectUrl,
   isDemoAutoLoginEnabled,
   isDemoEmail,
   safeDemoRedirect,
+  shouldSignInAsDemo,
 } from "@/lib/demo-user";
 import { DASHBOARD_PATH } from "@/lib/routes";
 
@@ -83,6 +85,8 @@ describe("safeDemoRedirect", () => {
   it("refuses off-site and looping targets", () => {
     expect(safeDemoRedirect("https://evil.example")).toBe(DASHBOARD_PATH);
     expect(safeDemoRedirect("//evil.example")).toBe(DASHBOARD_PATH);
+    // WHATWG URL treats `\` as `/`, so `/\\evil.com` is an open redirect.
+    expect(safeDemoRedirect("/\\evil.com")).toBe(DASHBOARD_PATH);
     expect(safeDemoRedirect("/demo")).toBe(DASHBOARD_PATH);
     expect(safeDemoRedirect("/login?redirect=/")).toBe(DASHBOARD_PATH);
     expect(safeDemoRedirect(null)).toBe(DASHBOARD_PATH);
@@ -92,5 +96,48 @@ describe("safeDemoRedirect", () => {
   it("sends the landing page to the dashboard", () => {
     // "/" is the marketing page; a just-signed-in visitor belongs in the app.
     expect(safeDemoRedirect("/")).toBe(DASHBOARD_PATH);
+  });
+});
+
+describe("demoRedirectUrl", () => {
+  const origin = "https://gereez.mn";
+
+  it("stays on this origin for in-app paths", () => {
+    const url = demoRedirectUrl("/contracts/abc?tab=meta", origin);
+    expect(url.origin).toBe(origin);
+    expect(url.pathname).toBe("/contracts/abc");
+    expect(url.searchParams.get("tab")).toBe("meta");
+  });
+
+  it("does not follow a backslash open-redirect into another host", () => {
+    // Defense in depth: even if the string check missed this, the origin
+    // comparison must still refuse to send the browser to evil.com.
+    const url = demoRedirectUrl("/\\evil.com", origin);
+    expect(url.origin).toBe(origin);
+    expect(url.pathname).toBe(DASHBOARD_PATH);
+  });
+
+  it("does not follow protocol-relative next values", () => {
+    const url = demoRedirectUrl("//evil.com", origin);
+    expect(url.origin).toBe(origin);
+    expect(url.pathname).toBe(DASHBOARD_PATH);
+  });
+});
+
+describe("shouldSignInAsDemo", () => {
+  it("signs anonymous visitors into the demo account", () => {
+    setEnv({ DEMO_USER_EMAIL: "demo@gereez.mn" });
+    expect(shouldSignInAsDemo(null)).toBe(true);
+    expect(shouldSignInAsDemo(undefined)).toBe(true);
+  });
+
+  it("does not replace a real user's session", () => {
+    setEnv({ DEMO_USER_EMAIL: "demo@gereez.mn" });
+    expect(shouldSignInAsDemo("user@example.com")).toBe(false);
+  });
+
+  it("lets the demo user through without treating them as a real account", () => {
+    setEnv({ DEMO_USER_EMAIL: "demo@gereez.mn" });
+    expect(shouldSignInAsDemo("demo@gereez.mn")).toBe(true);
   });
 });

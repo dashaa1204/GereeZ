@@ -44,13 +44,58 @@ export const DEMO_ATTEMPT_PARAM = "demo";
  * Where `/demo?next=…` may send the visitor after signing them in: in-app paths
  * only, never an absolute URL an attacker could plant, and never back into the
  * demo/login routes (which would loop).
+ *
+ * `/\\host` is rejected too: WHATWG URL treats a backslash like `/`, so
+ * `new URL("/\\evil.com", origin)` is `https://evil.com/` — an open redirect
+ * the `//` check alone does not catch. Login's `safeRedirect` already blocks
+ * this; keep the two in lockstep.
  */
 export function safeDemoRedirect(next: string | null | undefined): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) return DASHBOARD_PATH;
+  if (
+    !next ||
+    !next.startsWith("/") ||
+    next.startsWith("//") ||
+    next.startsWith("/\\")
+  ) {
+    return DASHBOARD_PATH;
+  }
   if (next.startsWith("/demo") || next.startsWith("/login")) return DASHBOARD_PATH;
   // The landing page bounces a signed-in visitor straight back here.
   if (next === "/") return DASHBOARD_PATH;
   return next;
+}
+
+/**
+ * Resolve `next` against this deployment's origin. Even if `safeDemoRedirect`
+ * misses a parser quirk, a URL that leaves the origin is replaced with the
+ * dashboard — `/demo` uses `NextResponse.redirect(url)` which follows whatever
+ * origin the URL constructor produced.
+ */
+export function demoRedirectUrl(
+  next: string | null | undefined,
+  origin: string,
+): URL {
+  const fallback = new URL(DASHBOARD_PATH, origin);
+  try {
+    const url = new URL(safeDemoRedirect(next), origin);
+    if (url.origin !== new URL(origin).origin) return fallback;
+    return url;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * `/demo` is a public path, so a signed-in user can hit it. Signing them into
+ * the shared demo account would drop their real session — and any contract they
+ * then uploaded would be visible to every other demo visitor. Only anonymous
+ * visitors (and the demo user themselves) should go through demo sign-in.
+ */
+export function shouldSignInAsDemo(
+  currentEmail: string | null | undefined,
+): boolean {
+  if (!currentEmail) return true;
+  return isDemoEmail(currentEmail);
 }
 
 /** True when this email is the shared demo account. */
