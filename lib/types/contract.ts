@@ -112,6 +112,12 @@ export interface Contract {
   end_date: string | null;
   /** PDF page count cached by the quote step; null before the first quote. */
   page_count: number | null;
+  /**
+   * When the audit last ran. `updated_at` moves on any write to the row (a
+   * saved correction letter, a cached page count), so the audit time needs a
+   * column of its own — see migration 014. Null on rows audited before it.
+   */
+  audited_at: string | null;
   created_at: string;
   updated_at: string;
 }

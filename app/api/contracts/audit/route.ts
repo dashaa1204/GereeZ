@@ -81,8 +81,9 @@ export async function POST(request: Request) {
 
     // The single way out of a failed audit: refund whatever was charged, leave
     // the row in a state the user can retry from, and say what went wrong.
-    // `updated_at` is stamped by hand because nothing else stamps it — the
-    // notification feed dates the failure from it, and the stranded-audit
+    // `updated_at` is stamped here as well as by the trigger from migration
+    // 014, so a database that has not run it yet still dates the failure
+    // correctly — the notification feed reads that date, and the stranded-audit
     // sweep (lib/stranded-audits.ts) measures staleness with it.
     const failAudit = async (message: string, status = 400) => {
       if (charged) {
@@ -152,6 +153,7 @@ export async function POST(request: Request) {
             start_date: dupSummary.metadata?.startDate ?? null,
             end_date: dupSummary.metadata?.endDate ?? null,
             status: "completed",
+            audited_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq("id", contractId)
@@ -289,6 +291,9 @@ export async function POST(request: Request) {
         end_date: metadata.endDate,
         page_count: pageCount,
         status: "completed",
+        // What the law-update alert compares against. Separate from updated_at,
+        // which any later write to the row (a saved correction letter) moves.
+        audited_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", contractId)

@@ -390,3 +390,34 @@ as $$
   from public.legal_documents ld
   group by ld.law_name;
 $$;
+
+-- ---------- 014: updated_at trigger + audit timestamp ----------
+-- `updated_at` used to be written by hand, so any write that forgot left it
+-- frozen at the upload time — which broke the failed-audit alert id and the
+-- stranded-audit sweep. The trigger makes the stamp unforgettable.
+--
+-- `audited_at` then holds what `updated_at` used to be borrowed for: when the
+-- audit actually ran, which lawUpdateAlerts (lib/notifications.ts) compares
+-- against the law's last ingest. Any other write to the row now moves
+-- `updated_at`, so the audit time needs a column of its own.
+
+alter table public.contracts add column if not exists audited_at timestamptz;
+
+update public.contracts
+  set audited_at = updated_at
+  where status = 'completed' and audited_at is null;
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists contracts_set_updated_at on public.contracts;
+create trigger contracts_set_updated_at
+  before update on public.contracts
+  for each row execute function public.set_updated_at();

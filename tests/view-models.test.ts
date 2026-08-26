@@ -24,6 +24,7 @@ function makeContract(overrides: Partial<Contract> = {}): Contract {
     start_date: null,
     end_date: null,
     page_count: null,
+    audited_at: null,
     created_at: "2026-06-01T00:00:00Z",
     updated_at: "2026-06-15T08:00:00Z",
     ...overrides,

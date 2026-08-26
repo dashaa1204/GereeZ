@@ -39,6 +39,7 @@ export function getDemoContract(): Contract {
     start_date: startDate,
     end_date: endDate,
     page_count: 6,
+    audited_at: now,
     created_at: now,
     updated_at: now,
     audit_summary: {
