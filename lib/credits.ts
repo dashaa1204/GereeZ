@@ -28,16 +28,21 @@ export async function getBalance(userId: string): Promise<number> {
 }
 
 export interface ChargeResult {
-  /** True when the charge succeeded (or was already paid for). */
+  /** True when the charge succeeded. */
   ok: boolean;
   /** Resulting balance after the charge, or current balance when rejected. */
   balance: number;
 }
 
 /**
- * Atomically charge `amount` credits for `contractId` via the `charge_credits`
- * RPC. The charge is idempotent per contract — re-auditing never double-bills.
- * Returns `{ ok: false }` when the balance is insufficient.
+ * Atomically charge `amount` credits for one audit attempt on `contractId` via
+ * the `charge_credits` RPC. Returns `{ ok: false }` when the balance is
+ * insufficient.
+ *
+ * Every attempt that reaches the model is charged, including a second one on a
+ * contract already paid for — that is a fresh audit, not a free reprint of the
+ * old one. What makes a *retry* free is the refund on the way out of a failure,
+ * not the ledger refusing to bill twice (see migration 015).
  *
  * Unlike rate limiting, this does NOT fail open: if the RPC errors we refuse
  * the audit, because failing open here would give away paid AI work for free.
@@ -68,9 +73,11 @@ export async function chargeCredits(
 }
 
 /**
- * Refund a contract's charge so the user can retry for free. Used when an audit
- * fails after credits were already deducted. Safe to call when nothing was
- * charged (no-op).
+ * Refund the contract's most recent charge so the user can retry for free.
+ * Used when an audit fails after credits were deducted, and when a request that
+ * was killed mid-run left an attempt paid for and undelivered. Earlier attempts
+ * that finished stay paid — they bought an audit the user still has. Safe to
+ * call when nothing was charged (no-op).
  */
 export async function refundCredits(contractId: string): Promise<void> {
   const supabase = createAdminClient();

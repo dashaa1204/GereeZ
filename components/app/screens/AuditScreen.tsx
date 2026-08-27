@@ -19,6 +19,7 @@ import {
   Sparkles,
   User,
 } from "lucide-react";
+import { auditRunMode } from "@/lib/audit-run";
 import type { AuditFinding, ContractVM } from "@/lib/view-models";
 import type { LegalArticle } from "@/lib/legal-articles";
 import { auditContract } from "@/lib/services/contracts.client";
@@ -142,7 +143,7 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
             {contract.status === "running" ? (
               <AuditRunning />
             ) : (
-              contract.score == null && <RunAudit contract={contract} />
+              <RunAudit contract={contract} />
             )}
 
             {contract.typeLabel && (
@@ -468,22 +469,44 @@ function AuditRunning() {
 }
 
 /**
- * The way back from a failed or never-run audit. Without it a contract whose
- * audit errored is a dead end: the file is stored, the credits were refunded,
- * and the only path forward was to upload the same document again.
+ * The way back from a failed or never-run audit — and, on a finished one, the
+ * way to run it again. Without the first, a contract whose audit errored is a
+ * dead end: the file is stored, the credits were refunded, and the only path
+ * forward was to upload the same document again. Without the second, the
+ * law-update alert invites a re-check onto a page with no way to do it.
+ *
+ * A re-run is a second audit at full price, so it asks twice — the same
+ * confirm the delete row uses. A retry costs nothing beyond what was already
+ * refunded, so it does not.
  */
 function RunAudit({ contract }: { contract: ContractVM }) {
   const router = useRouter();
   const [running, setRunning] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const retry = contract.status === "failed";
+  const mode = auditRunMode(contract);
   const cost =
     contract.pages != null ? `${contract.pages} кредит зарцуулна.` : null;
-  const hint = retry
-    ? ["Өмнөх оролдлогын кредит буцаагдсан.", cost].filter(Boolean).join(" ")
-    : [cost, "Амжилтгүй бол кредит буцаана."].filter(Boolean).join(" ");
+  const hint = {
+    // A retry already knows credits come back — it just got them — so it
+    // spends its second sentence on the price instead of repeating the promise.
+    retry: ["Өмнөх оролдлогын кредит буцаагдсан.", cost],
+    fresh: [cost, "Амжилтгүй бол кредит буцаана."],
+    // Nothing was refunded here: the audit on screen was delivered and paid
+    // for. Saying so is the difference between a price and a surprise.
+    rerun: [
+      "Энэ нь шинэ шинжилгээ — өмнөх дүн хадгалагдсан хэвээр.",
+      cost ?? "Хуудас тутамд кредит дахин зарцуулна.",
+    ],
+  }[mode]
+    .filter(Boolean)
+    .join(" ");
 
   async function run() {
+    if (mode === "rerun" && !confirming) {
+      setConfirming(true);
+      return;
+    }
     setRunning(true);
     setError(null);
     try {
@@ -493,6 +516,7 @@ function RunAudit({ contract }: { contract: ContractVM }) {
       setError(e instanceof Error ? e.message : "Шинжилгээ амжилтгүй боллоо");
     } finally {
       setRunning(false);
+      setConfirming(false);
     }
   }
 
@@ -502,24 +526,31 @@ function RunAudit({ contract }: { contract: ContractVM }) {
         type="button"
         onClick={run}
         disabled={running}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60"
+        className={`flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 ${
+          mode === "rerun" && !confirming
+            ? "border border-border text-foreground hover:bg-muted"
+            : "bg-primary text-primary-foreground hover:bg-primary/90"
+        }`}
       >
         {running ? (
           <Loader2 className="size-4 animate-spin" />
-        ) : retry ? (
-          <RotateCw className="size-4" />
-        ) : (
+        ) : mode === "fresh" ? (
           <Sparkles className="size-4" />
+        ) : (
+          <RotateCw className="size-4" />
         )}
         {running
           ? "Шинжилж байна…"
-          : retry
-            ? "Дахин шинжлэх"
-            : "Шинжилгээг ажиллуулах"}
+          : mode === "fresh"
+            ? "Шинжилгээг ажиллуулах"
+            : mode === "retry"
+              ? "Дахин шинжлэх"
+              : confirming
+                ? `Дахин дарж баталгаажуулна уу${cost ? ` — ${contract.pages} кредит` : ""}`
+                : "Дахин шинжлүүлэх"}
       </button>
-      {/* Two sentences at most. A retry already knows credits come back — it
-          just got them — so it spends its second sentence on the price
-          instead of repeating the promise. */}
+      {/* Two sentences at most, and they have to differ: what the run costs
+          the user is not the same in all three cases. */}
       <p className="text-muted-foreground text-xs">{hint}</p>
       {error && (
         <p className="text-destructive flex items-start gap-1.5 text-xs">
