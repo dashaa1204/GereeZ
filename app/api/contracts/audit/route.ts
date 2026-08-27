@@ -15,6 +15,7 @@ import { formatUserError } from "@/lib/api-errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { auditCost, chargeCredits, refundCredits } from "@/lib/credits";
 import { generateDemoAudit, isDemoMode } from "@/lib/demo-audit";
+import { isStrandedAudit } from "@/lib/stranded-audits";
 import type { AuditSummary } from "@/lib/types/contract";
 import { formatRetrievedArticlesForStorage } from "@/lib/vector-store";
 import {
@@ -80,6 +81,19 @@ export async function POST(request: Request) {
     }
 
     ownershipVerified = true;
+
+    // One audit at a time. Two runs on the same contract are two AI bills
+    // against one charge — the ledger is idempotent — and a result that depends
+    // on which of them finishes last. A row inside the route's own runtime
+    // ceiling still has a request behind it and is left alone; past it, nothing
+    // is running and this call takes the contract over.
+    // Not failAudit: that would mark a live audit failed and refund it midway.
+    if (contract.status === "processing" && !isStrandedAudit(contract)) {
+      return NextResponse.json(
+        { error: "Энэ гэрээний шинжилгээ хийгдэж байна. Дуусахыг хүлээнэ үү." },
+        { status: 409 },
+      );
+    }
 
     // The single way out of a failed audit: refund whatever was charged, leave
     // the row in a state the user can retry from, and say what went wrong.

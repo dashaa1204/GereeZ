@@ -1,5 +1,4 @@
 import { refundCredits } from "./credits";
-import { STALE_AUDIT_HOURS } from "./notifications";
 import { createAdminClient } from "./supabase-server";
 import type { Contract } from "./types/contract";
 
@@ -14,11 +13,20 @@ import type { Contract } from "./types/contract";
  * writes to that row again, so the repair has to happen the next time we read
  * it — which is what this module does, from the dashboard's own fetch.
  *
- * "Stranded" is measured with the same threshold the notification feed uses:
- * the audit call is blocking, so a row still `processing` an hour later has no
- * request behind it. The audit route stamps `updated_at` when it starts, so the
- * clock measures the audit rather than the upload.
+ * The audit route stamps `updated_at` when it starts, so the clock below
+ * measures the audit rather than the upload.
  */
+
+/**
+ * How long a `processing` row can still have a request behind it.
+ *
+ * The route caps itself at `maxDuration = 300s`, so past that — plus a margin
+ * for the platform to tear the request down — nothing is running, whatever the
+ * row says. That one fact answers two questions: whose credits are owed back
+ * (here), and whether a second audit on the same contract would collide with a
+ * live one or merely take over a dead one (`app/api/contracts/audit`).
+ */
+export const AUDIT_MAX_RUNTIME_MS = 6 * 60 * 1000;
 
 /** True when this row's audit request is gone and its credits are owed back. */
 export function isStrandedAudit(
@@ -28,7 +36,7 @@ export function isStrandedAudit(
   if (contract.status !== "processing") return false;
   const startedAt = Date.parse(contract.updated_at ?? "");
   if (Number.isNaN(startedAt)) return false;
-  return now - startedAt >= STALE_AUDIT_HOURS * 60 * 60 * 1000;
+  return now - startedAt >= AUDIT_MAX_RUNTIME_MS;
 }
 
 /**

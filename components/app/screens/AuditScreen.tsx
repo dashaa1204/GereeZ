@@ -135,7 +135,15 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
               </div>
             )}
 
-            {contract.score == null && <RunAudit contract={contract} />}
+            {/* Offering "run the audit" while one is running invited a second
+                run: two AI bills against one charge, and whichever finished
+                last overwrote the other. The server refuses that now; this is
+                the same answer, before the user spends a click on it. */}
+            {contract.status === "running" ? (
+              <AuditRunning />
+            ) : (
+              contract.score == null && <RunAudit contract={contract} />
+            )}
 
             {contract.typeLabel && (
               <Badge variant="secondary">{contract.typeLabel}</Badge>
@@ -431,6 +439,30 @@ function FindingItem({ f }: { f: AuditFinding }) {
         )}
       </AccordionContent>
     </AccordionItem>
+  );
+}
+
+/**
+ * An audit already under way — started in another tab, or here before a reload.
+ * There is nothing to press: the work finishes on its own, and the page has no
+ * live connection to it, so the honest offer is to look again.
+ */
+function AuditRunning() {
+  const router = useRouter();
+  return (
+    <div className="space-y-2">
+      <p className="text-muted-foreground flex items-center gap-2 text-sm">
+        <Loader2 className="text-brand size-4 animate-spin" />
+        Шинжилгээ хийгдэж байна…
+      </p>
+      <button
+        type="button"
+        onClick={() => router.refresh()}
+        className="text-brand text-xs font-medium hover:underline"
+      >
+        Дүнг шалгах
+      </button>
+    </div>
   );
 }
 
