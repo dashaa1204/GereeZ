@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, Loader2, ShieldCheck, TrendingUp, Upload } from "lucide-react";
 import { CREDIT_PACKS } from "@/lib/credit-packs";
+import { DASHBOARD_PATH } from "@/lib/routes";
 import { rechargeCredits } from "@/lib/services/credits.client";
 import { fmt } from "../display";
 import { Eyebrow, IconChip, Panel, PanelGlow } from "../kit";
@@ -25,7 +26,9 @@ export function PaymentScreen({ credits }: { credits: number }) {
       setSelected(null);
       // Other screens (home hero, contracts list) show the balance too.
       router.refresh();
-      router.back();
+      // Not router.back(): the low-credit alert links straight here, so "back"
+      // can be whatever the browser was showing before the app — or nothing.
+      router.push(DASHBOARD_PATH);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Цэнэглэхэд алдаа гарлаа");
     } finally {

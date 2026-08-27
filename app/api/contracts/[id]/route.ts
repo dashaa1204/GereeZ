@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { forgetContractAlertReads } from "@/lib/alerts";
 import { formatUserError } from "@/lib/api-errors";
 import { isDemoEmail } from "@/lib/demo-user";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
@@ -72,6 +73,11 @@ export async function DELETE(
         { status: 500 },
       );
     }
+
+    // The contract's alerts are gone with it, but their read marks are not:
+    // `alert_reads` has no foreign key to the contract (alerts are derived, not
+    // stored), so nothing cascades and nothing would ever match them again.
+    await forgetContractAlertReads(user.id, id);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

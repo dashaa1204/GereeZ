@@ -391,6 +391,17 @@ function lawUpdateAlerts(
   return out;
 }
 
+/**
+ * Alert ids for a contract must contain that contract's id.
+ *
+ * Read marks are stored by alert id (`alert_reads`), and alerts are derived per
+ * request rather than stored, so the id is the only thing tying a mark to the
+ * contract it came from — it is what lets the marks be dropped when the
+ * contract is deleted (`forgetContractAlertReads`). A new alert kind that
+ * leaves the contract id out would leak a row per user, forever; a test in
+ * tests/notifications.test.ts fails if one does.
+ */
+
 /** How many days away the alert's subject is — nearest to today ranks first. */
 function urgency(alert: Omit<AlertVM, "read">): number {
   const days = daysUntil(alert.date);
