@@ -53,6 +53,21 @@ export function safeDemoRedirect(next: string | null | undefined): string {
   return next;
 }
 
+/**
+ * The display name the demo account is seeded with and kept at.
+ *
+ * Everyone who follows the demo link is signed into this one account, so its
+ * profile is shared furniture rather than one visitor's to edit: a rename by
+ * one visitor is what every later visitor sees. The app refuses the change
+ * (`app/api/account`), and `/demo` puts the name back if it drifts anyway.
+ */
+export const DEMO_USER_NAME = "Демо хэрэглэгч";
+
+/** True when the demo account's display name is not what it should be. */
+export function demoNameDrifted(name: unknown): boolean {
+  return typeof name !== "string" || name.trim() !== DEMO_USER_NAME;
+}
+
 /** True when this email is the shared demo account. */
 export function isDemoEmail(email: string | null | undefined): boolean {
   const demo = process.env.DEMO_USER_EMAIL?.trim();
