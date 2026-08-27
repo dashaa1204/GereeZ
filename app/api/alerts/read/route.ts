@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { formatUserError } from "@/lib/api-errors";
 import { markAlertsRead } from "@/lib/alerts";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
@@ -15,6 +16,12 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Нэвтэрнэ үү" }, { status: 401 });
     }
+
+    // The per-request caps below bound one call; this bounds the sequence of
+    // them. Every other authenticated write has a ceiling, and this one writes
+    // rows that nothing ages out.
+    const rateLimit = await checkRateLimit("alerts", user.id);
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
     const body = await request.json().catch(() => null);
     const rawIds = body?.ids;

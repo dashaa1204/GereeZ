@@ -75,6 +75,15 @@ export const RATE_LIMITS = {
     windowSeconds: HOUR,
     message: "Хэт олон удаа цэнэглэлээ. Хэсэг хүлээгээд дахин оролдоно уу.",
   },
+  // Marking notifications read. Cheap, and the client does it on its own —
+  // but it is a write with no natural ceiling: the ids are opaque strings, so
+  // rows accumulate and only the ones naming a deleted contract are ever
+  // cleaned up (`forgetContractAlertReads`).
+  alerts: {
+    limit: 60,
+    windowSeconds: HOUR,
+    message: "Мэдэгдлийн хүсэлт хэт олон байна. Хэсэг хүлээгээд дахин оролдоно уу.",
+  },
   // A metadata write with no spend behind it, but it is the one thing a
   // signed-in user can change about their account, so it gets a ceiling too.
   profile: {

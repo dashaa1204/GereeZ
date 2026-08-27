@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { auditCost, canAffordAudit } from "@/lib/audit-cost";
+import { contractCardState } from "@/lib/audit-run";
 import {
   CONTRACT_FILTERS,
   FILTER_EMPTY_HINT,
@@ -200,10 +201,14 @@ export function ContractsScreen({
       {/* one column on the phone, a card grid once there is room for it */}
       <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0 lg:items-start">
       {visible.map((c) => {
+        const cardState = contractCardState(c);
+
         // A failed audit gets its own card. The locked one below would send the
         // user to buy credits, which is the single thing that cannot help here:
         // the audit refunded what it charged, and what is missing is a retry.
-        if (c.status === "failed") {
+        // Only when there is nothing to show, though: a failed *re-run* leaves
+        // the earlier audit intact, and this card would hide it.
+        if (cardState === "failed") {
           return (
             <div key={c.id} className="bg-card border-destructive/30 space-y-3.5 rounded-2xl border p-5">
               {cardHeader(c)}
@@ -245,7 +250,7 @@ export function ContractsScreen({
         // buy credits — which starts no audit and, with a balance already big
         // enough, answers a question the user did not ask. What it was missing
         // is the way to the contract, which is where the run button lives.
-        if (!c.paid) {
+        if (cardState === "unaudited") {
           const running = c.status === "running";
           const cost = c.pages != null ? auditCost(c.pages) : null;
           const affordable = canAffordAudit(c.pages, credits);
@@ -337,6 +342,15 @@ export function ContractsScreen({
         return (
           <div key={c.id} className="bg-card border border-border rounded-2xl p-5 space-y-3.5">
             {cardHeader(c)}
+            {/* The score below is a delivered audit; this says the last attempt
+                to replace it did not land, without taking the audit away. */}
+            {c.status === "failed" && (
+              <p className="text-destructive flex items-start gap-1.5 text-xs">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                Сүүлийн дахин шинжилгээ амжилтгүй боллоо. Кредит буцаагдсан,
+                доорх дүн хэвээр байна.
+              </p>
+            )}
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div

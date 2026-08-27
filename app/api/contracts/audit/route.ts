@@ -15,6 +15,7 @@ import { formatUserError } from "@/lib/api-errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { auditCost, chargeCredits, refundCredits } from "@/lib/credits";
 import { generateDemoAudit, isDemoMode } from "@/lib/demo-audit";
+import { inheritedProposalState } from "@/lib/proposal-quota";
 import { isStrandedAudit } from "@/lib/stranded-audits";
 import type { AuditSummary } from "@/lib/types/contract";
 import { formatRetrievedArticlesForStorage } from "@/lib/vector-store";
@@ -193,7 +194,14 @@ export async function POST(request: Request) {
           .from("contracts")
           .update({
             compliance_score: dupContract.compliance_score,
-            audit_summary: { ...dupSummary, cachedFromPriorAudit: true },
+            audit_summary: {
+              ...dupSummary,
+              // Explicit rather than inherited by spread: the letters travel
+              // with the audit they belong to, and both cache paths have to
+              // agree about that (see the content-hash one below).
+              ...inheritedProposalState(dupSummary),
+              cachedFromPriorAudit: true,
+            },
             start_date: dupSummary.metadata?.startDate ?? null,
             end_date: dupSummary.metadata?.endDate ?? null,
             status: "completed",
@@ -325,7 +333,13 @@ export async function POST(request: Request) {
         ? cachedSummary?.retrievalMode
         : audit.retrievedContext.mode,
       demoMode: isDemoMode(),
-      ...(cachedFromPriorAudit ? { cachedFromPriorAudit: true } : {}),
+      // A cache hit reuses an audit somebody already paid for, so its letters
+      // — used and unused — come with it. A paid run gets none of this: it
+      // bought a new audit, and the old letter is about findings it just
+      // replaced.
+      ...(cachedFromPriorAudit
+        ? { cachedFromPriorAudit: true, ...inheritedProposalState(cachedSummary) }
+        : {}),
     };
 
     const { data: updatedContract, error: updateError } = await supabase

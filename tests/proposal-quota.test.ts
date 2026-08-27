@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  inheritedProposalState,
   PROPOSAL_RUNS_PER_AUDIT,
   proposalRunsLeft,
   proposalRunsUsed,
@@ -59,5 +60,43 @@ describe("proposalRunsLeft", () => {
   it("never goes negative on an over-counted row", () => {
     const overspent = makeSummary({ proposalRuns: PROPOSAL_RUNS_PER_AUDIT + 5 });
     expect(proposalRunsLeft(overspent)).toBe(0);
+  });
+});
+
+// A cache hit is the source's audit copied onto another contract, and it is
+// charged nothing. If its letters did not come with it, re-uploading the same
+// document would mint a fresh allowance each time — free model calls bought
+// once.
+describe("inheritedProposalState", () => {
+  it("carries the letter and what it cost", () => {
+    const source = makeSummary({ proposal: "Эрхэм...", proposalRuns: 2 });
+    expect(inheritedProposalState(source)).toEqual({
+      proposal: "Эрхэм...",
+      proposalRuns: 2,
+    });
+  });
+
+  it("counts a letter saved before the counter as one run spent", () => {
+    expect(inheritedProposalState(makeSummary({ proposal: "Эрхэм..." }))).toEqual({
+      proposal: "Эрхэм...",
+      proposalRuns: 1,
+    });
+  });
+
+  it("leaves an untouched allowance untouched", () => {
+    expect(inheritedProposalState(makeSummary())).toEqual({ proposalRuns: 0 });
+  });
+
+  // A spent allowance with no letter to show still has to travel, or the
+  // duplicate is a way to buy three more.
+  it("carries a spent allowance even with no letter", () => {
+    expect(inheritedProposalState(makeSummary({ proposalRuns: 3 }))).toEqual({
+      proposalRuns: 3,
+    });
+  });
+
+  it("has nothing to inherit from a missing audit", () => {
+    expect(inheritedProposalState(null)).toEqual({});
+    expect(inheritedProposalState(undefined)).toEqual({});
   });
 });

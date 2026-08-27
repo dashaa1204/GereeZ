@@ -2,7 +2,8 @@
 -- Alerts themselves are derived on the fly (compliance alerts from
 -- audit_summary, expiry alerts from contract dates), so only the read marks
 -- need storage. One row per (user, alert id); alert ids are the stable string
--- ids built in lib/figma-data.ts.
+-- ids built in lib/notifications.ts — each one about a contract carries that
+-- contract's id, which is how the marks are dropped when it is deleted.
 -- Run this in the Supabase SQL Editor (Dashboard → SQL → New query).
 
 create table if not exists public.alert_reads (
