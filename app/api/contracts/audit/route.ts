@@ -12,7 +12,7 @@ import {
 } from "@/lib/audit";
 import { hashContractText, hashRawFile } from "@/lib/audit/content-hash";
 import { formatUserError } from "@/lib/api-errors";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { auditCost, chargeCredits, refundCredits } from "@/lib/credits";
 import { generateDemoAudit, isDemoMode } from "@/lib/demo-audit";
 import { isStrandedAudit } from "@/lib/stranded-audits";
@@ -47,12 +47,7 @@ export async function POST(request: Request) {
     }
 
     const rateLimit = await checkRateLimit("audit", user.id);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Хэт олон шинжилгээ. Хэсэг хүлээгээд дахин оролдоно уу." },
-        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
-      );
-    }
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
     const body = await request.json();
     contractId = body?.contractId as string | undefined;

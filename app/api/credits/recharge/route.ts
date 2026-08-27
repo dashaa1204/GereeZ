@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { formatUserError } from "@/lib/api-errors";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { RECHARGE_AMOUNT, rechargeCredits } from "@/lib/credits";
 import { findCreditPack } from "@/lib/credit-packs";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
@@ -21,13 +21,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Нэвтэрнэ үү" }, { status: 401 });
     }
 
-    const rateLimit = await checkRateLimit("upload", user.id);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Хэт олон хүсэлт. Хэсэг хүлээгээд дахин оролдоно уу." },
-        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
-      );
-    }
+    const rateLimit = await checkRateLimit("recharge", user.id);
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
     // Body is optional (legacy no-body calls get the flat demo amount).
     let amount = RECHARGE_AMOUNT;
