@@ -77,13 +77,14 @@ export async function POST(request: Request) {
 
     ownershipVerified = true;
 
-    // One audit at a time. Two runs on the same contract are two AI bills
-    // against one charge — the ledger is idempotent — and a result that depends
-    // on which of them finishes last. A row inside the route's own runtime
-    // ceiling still has a request behind it and is left alone; past it, nothing
-    // is running and this call takes the contract over.
+    // One audit at a time. Two runs on the same contract are two AI bills and a
+    // result that depends on which of them finishes last. A row inside the
+    // route's own runtime ceiling still has a request behind it and is left
+    // alone; past it, nothing is running and this call takes the contract over.
     // Not failAudit: that would mark a live audit failed and refund it midway.
-    if (contract.status === "processing" && !isStrandedAudit(contract)) {
+    const strandedTakeover =
+      contract.status === "processing" && isStrandedAudit(contract);
+    if (contract.status === "processing" && !strandedTakeover) {
       return NextResponse.json(
         { error: "Энэ гэрээний шинжилгээ хийгдэж байна. Дуусахыг хүлээнэ үү." },
         { status: 409 },
@@ -108,13 +109,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message }, { status });
     };
 
-    // Stamping `updated_at` here starts the staleness clock at the moment the
+    // Claim the row before spending anything on it. `updated_at` moves on
+    // every write (migration 014's trigger, and by hand here for a database
+    // that has not run it), so matching the value we just read is a
+    // compare-and-swap: of two requests that both got past the gate above,
+    // exactly one claims the contract and the other is told to wait. Charging
+    // per attempt is what makes that worth doing — the loser of that race used
+    // to waste an AI run, and would now also pay for it.
+    //
+    // Stamping `updated_at` also starts the staleness clock at the moment the
     // audit begins rather than at upload — without it, auditing a contract
     // uploaded hours ago would look abandoned to the sweep while it is running.
-    await supabase
+    const { data: claimed, error: claimError } = await supabase
       .from("contracts")
       .update({ status: "processing", updated_at: new Date().toISOString() })
-      .eq("id", contractId);
+      .eq("id", contractId)
+      .eq("updated_at", contract.updated_at)
+      .select("id");
+
+    if (claimError) {
+      return NextResponse.json(
+        { error: `Шинжилгээ эхлүүлэхэд алдаа: ${claimError.message}` },
+        { status: 500 },
+      );
+    }
+    if (!claimed || claimed.length === 0) {
+      return NextResponse.json(
+        { error: "Энэ гэрээний шинжилгээ хийгдэж байна. Дуусахыг хүлээнэ үү." },
+        { status: 409 },
+      );
+    }
+
+    // Taking over a request that was killed mid-run: whatever it charged bought
+    // nothing, and now that charges are per attempt, leaving it on the ledger
+    // would make this run the user's second payment for their first audit. This
+    // is the refund the stranded sweep would have issued had anyone loaded the
+    // dashboard first — and the claim above means only one taker gets here.
+    if (strandedTakeover) {
+      await refundCredits(contractId);
+    }
 
     const { data: fileData, error: downloadError } = await supabase.storage
       .from(CONTRACTS_BUCKET)
@@ -257,8 +290,10 @@ export async function POST(request: Request) {
           retrievedContext: { matches: [], contextText: "", mode: "none" },
         };
       } else {
-        // Real AI work ahead — charge credits now (idempotent per contract, so
-        // a retry won't double-bill). Demo and cache-hit paths above are free.
+        // Real AI work ahead — charge this attempt now. A retry after a failure
+        // is free because the failure refunded, not because the ledger refuses
+        // to bill twice; a fresh run on a finished audit is a second audit and
+        // pays again. Demo and cache-hit paths above are free.
         const cost = auditCost(pageCount);
         const charge = await chargeCredits(user.id, contractId, cost);
         if (!charge.ok) {
