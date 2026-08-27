@@ -10,23 +10,34 @@ import {
   PenLine,
   RefreshCw,
 } from "lucide-react";
-import { generateProposal } from "@/lib/services/proposal.client";
+import {
+  generateProposal,
+  ProposalError,
+} from "@/lib/services/proposal.client";
+import { PROPOSAL_RUNS_PER_AUDIT } from "@/lib/proposal-quota";
 
 /**
  * Turns an audit into an action: one tap generates a ready-to-send correction
  * letter to the landlord/employer, citing the exact law behind each finding.
  * A saved letter opens collapsed so it doesn't dominate the screen — tap the
  * header to expand it.
+ *
+ * The letter costs nothing beyond the audit, but the audit covers a fixed
+ * number of rewrites (lib/proposal-quota.ts). The card says how many are left
+ * before the user spends one, so "included" never turns into a surprise.
  */
 export function ProposalCard({
   contractId,
   issueCount,
   initialProposal,
+  runsLeft: initialRunsLeft = PROPOSAL_RUNS_PER_AUDIT,
 }: {
   contractId: string;
   issueCount: number;
   /** A previously saved letter, shown immediately without regenerating. */
   initialProposal?: string | null;
+  /** Generations this contract's audit still covers. */
+  runsLeft?: number;
 }) {
   const [proposal, setProposal] = useState<string | null>(
     initialProposal ?? null,
@@ -34,6 +45,7 @@ export function ProposalCard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [runsLeft, setRunsLeft] = useState(initialRunsLeft);
   // A previously saved letter starts folded; a freshly generated one unfolds.
   const [collapsed, setCollapsed] = useState(Boolean(initialProposal));
 
@@ -41,10 +53,17 @@ export function ProposalCard({
     setLoading(true);
     setError(null);
     try {
-      setProposal(await generateProposal(contractId));
+      const result = await generateProposal(contractId);
+      setProposal(result.proposal);
+      setRunsLeft(result.runsLeft);
       setCollapsed(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Захидал үүсгэж чадсангүй");
+      // The server is the authority on the allowance: a refusal that reports
+      // one corrects a count this card had stale.
+      if (e instanceof ProposalError && typeof e.runsLeft === "number") {
+        setRunsLeft(e.runsLeft);
+      }
     } finally {
       setLoading(false);
     }
@@ -61,11 +80,15 @@ export function ProposalCard({
     }
   }
 
+  // Nothing more to pay, but not endless either: the audit bought a fixed
+  // number of drafts and this is the one place the user can see the tally.
+  const exhausted = runsLeft === 0;
+
   // The letter only covers the high and medium findings, so the count says
   // which ones — a bare "12 асуудал" beside a screen reporting 16 findings
   // reads as a contradiction, and leaves the reader wondering what was dropped.
   const subtitle = !proposal
-    ? `Өндөр ба дунд эрсдэлтэй ${issueCount} заалтыг хуулийн үндэслэлтэйгээр засуулах бэлэн захидлыг нэг товшилтоор үүсгэнэ.`
+    ? `Өндөр ба дунд эрсдэлтэй ${issueCount} заалтыг хуулийн үндэслэлтэйгээр засуулах бэлэн захидлыг нэг товшилтоор үүсгэнэ. Шинжилгээний үнэд багтсан — нэмэлт кредит зарцуулагдахгүй.`
     : collapsed
       ? "Захидал бэлэн. Харахын тулд дарна уу."
       : "Захидал бэлэн.";
@@ -108,7 +131,7 @@ export function ProposalCard({
       {!proposal && (
         <button
           onClick={generate}
-          disabled={loading}
+          disabled={loading || exhausted}
           className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60"
         >
           {loading ? (
@@ -123,6 +146,13 @@ export function ProposalCard({
             </>
           )}
         </button>
+      )}
+
+      {!proposal && exhausted && (
+        <p className="mt-3 text-[11px] text-muted-foreground/70 leading-relaxed">
+          Энэ шинжилгээнд багтсан {PROPOSAL_RUNS_PER_AUDIT} захидлыг ашиглаж
+          дууссан байна.
+        </p>
       )}
 
       {error && (
@@ -153,22 +183,31 @@ export function ProposalCard({
                 </>
               )}
             </button>
-            <button
-              onClick={generate}
-              disabled={loading}
-              aria-label="Дахин үүсгэх"
-              className="flex items-center justify-center gap-2 rounded-xl border border-border text-foreground px-4 py-2.5 hover:bg-muted active:scale-[0.98] transition-all disabled:opacity-60"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-            </button>
+            {!exhausted && (
+              <button
+                onClick={generate}
+                disabled={loading}
+                aria-label={`Дахин үүсгэх (${runsLeft} удаа үлдсэн)`}
+                className="flex items-center justify-center gap-2 rounded-xl border border-border text-foreground px-4 py-2.5 hover:bg-muted active:scale-[0.98] transition-all disabled:opacity-60"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+              </button>
+            )}
           </div>
           <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
             AI-аар үүсгэсэн ноорог. Илгээхээсээ өмнө хянаж, шаардлагатай бол
             засварлана уу.
+          </p>
+          {/* The allowance is spent by tapping regenerate, so it belongs beside
+              the button — after the fact it is only bad news. */}
+          <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+            {exhausted
+              ? `Шинжилгээнд багтсан ${PROPOSAL_RUNS_PER_AUDIT} захидлыг ашиглаж дууссан. Энэ захидал хадгалагдсан хэвээр байгаа тул хуулж авах боломжтой.`
+              : `Дахин үүсгэх боломж: ${runsLeft} / ${PROPOSAL_RUNS_PER_AUDIT} — шинжилгээний үнэд багтсан, нэмэлт кредит зарцуулагдахгүй.`}
           </p>
         </div>
       )}

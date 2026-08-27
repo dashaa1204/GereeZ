@@ -4,6 +4,7 @@ import { resolveContractLabels } from "./contract-labels";
 import { getDashboardData } from "./contracts";
 import { getLawLastUpdated } from "./legal-articles";
 import { buildAlerts, type AlertVM } from "./notifications";
+import { proposalRunsLeft } from "./proposal-quota";
 import { getAuthenticatedUser } from "./supabase-server";
 import { getBalance } from "./credits";
 import {
@@ -77,6 +78,8 @@ export interface ContractVM {
   highRisk: boolean;
   /** Previously generated correction letter, or null if none saved yet. */
   proposal: string | null;
+  /** Letter generations this contract's audit still covers (see lib/proposal-quota.ts). */
+  proposalRunsLeft: number;
 }
 
 /**
@@ -158,6 +161,7 @@ export function mapContract(c: Contract): ContractVM {
     expired: getTrackStatus(c) === "expired",
     highRisk: (c.audit_summary?.alerts ?? []).some((a) => a.severity === "high"),
     proposal: c.audit_summary?.proposal ?? null,
+    proposalRunsLeft: proposalRunsLeft(c.audit_summary),
   };
 }
 
