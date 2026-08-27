@@ -11,6 +11,7 @@ import {
   noticeDeadline,
   todayIso,
 } from "./tracking";
+import { lawMovedSince } from "./law-freshness";
 import type { AlertSeverity, Contract } from "./types/contract";
 
 /**
@@ -355,24 +356,13 @@ function lawUpdateAlerts(
     // `audited_at` is when the audit ran; `updated_at` is when the row last
     // changed, which a saved correction letter or a cached page count also
     // moves. Fall back to it only for rows audited before that column existed.
-    const auditedAt = Date.parse(c.audited_at ?? c.updated_at ?? "");
-    if (Number.isNaN(auditedAt)) continue;
-
-    const cited = new Set(
-      (c.audit_summary?.alerts ?? [])
-        .map((a) => a.lawName?.trim())
-        .filter((name): name is string => Boolean(name)),
+    // The comparison itself is shared with the audit route, which refuses to
+    // reuse an audit this call would flag (see lib/law-freshness.ts).
+    const newest = lawMovedSince(
+      c.audited_at ?? c.updated_at,
+      c.audit_summary,
+      lawUpdatedAt,
     );
-    for (const article of c.audit_summary?.retrievedArticles ?? []) {
-      if (article.lawName?.trim()) cited.add(article.lawName.trim());
-    }
-
-    let newest: { law: string; at: number } | null = null;
-    for (const law of cited) {
-      const at = Date.parse(lawUpdatedAt.get(law) ?? "");
-      if (Number.isNaN(at) || at <= auditedAt) continue;
-      if (!newest || at > newest.at) newest = { law, at };
-    }
     if (!newest) continue;
 
     const stamp = new Date(newest.at).toISOString().slice(0, 10);
