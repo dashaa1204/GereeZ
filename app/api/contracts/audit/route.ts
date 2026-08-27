@@ -15,6 +15,8 @@ import { formatUserError } from "@/lib/api-errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { auditCost, chargeCredits, refundCredits } from "@/lib/credits";
 import { generateDemoAudit, isDemoMode } from "@/lib/demo-audit";
+import { auditStillCurrent } from "@/lib/law-freshness";
+import { getLawLastUpdated } from "@/lib/legal-articles";
 import { inheritedProposalState } from "@/lib/proposal-quota";
 import { isStrandedAudit } from "@/lib/stranded-audits";
 import type { AuditSummary } from "@/lib/types/contract";
@@ -164,13 +166,19 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await fileData.arrayBuffer());
     const mediaType = detectContractMediaType(buffer);
 
+    // Read once per request, and only when there is a cache candidate to judge:
+    // most audits never reach either branch, and this is a round trip.
+    let lawVersions: ReadonlyMap<string, string> | null = null;
+    const lawUpdatedAt = async () =>
+      (lawVersions ??= await getLawLastUpdated());
+
     // Cheapest spam gate: a byte-identical re-upload reuses the prior audit
     // before paying for any OCR or AI. Runs ahead of extraction.
     const rawHash = hashRawFile(buffer);
     if (!isDemoMode()) {
       const { data: dupContract } = await supabase
         .from("contracts")
-        .select("compliance_score, audit_summary")
+        .select("compliance_score, audit_summary, audited_at, updated_at")
         .eq("status", "completed")
         .eq("user_id", user.id)
         .neq("id", contractId)
@@ -188,7 +196,16 @@ export async function POST(request: Request) {
         dupContract &&
         dupSummary?.alerts &&
         dupSummary.metadata &&
-        !dupSummary.cachedFromPriorAudit
+        !dupSummary.cachedFromPriorAudit &&
+        // …and the law it was measured against has not moved since. Reusing an
+        // audit the law has outrun would answer a re-check with the reading it
+        // already had, and stamp it as freshly audited — which is exactly what
+        // switches the law-update alert off.
+        auditStillCurrent(
+          dupContract.audited_at ?? dupContract.updated_at,
+          dupSummary,
+          await lawUpdatedAt(),
+        )
       ) {
         const { data: reused, error: reuseError } = await supabase
           .from("contracts")
@@ -265,7 +282,7 @@ export async function POST(request: Request) {
     if (!audit) {
       const { data: cachedContract } = await supabase
         .from("contracts")
-        .select("compliance_score, audit_summary")
+        .select("compliance_score, audit_summary, audited_at, updated_at")
         .eq("status", "completed")
         .eq("user_id", user.id)
         .neq("id", contractId)
@@ -283,7 +300,14 @@ export async function POST(request: Request) {
         // Reuse only a fresh current-pipeline audit (carries metadata, not a
         // prior cache copy) so pre-tracking and stamped-empty entries re-run.
         cachedSummary.metadata &&
-        !cachedSummary.cachedFromPriorAudit
+        !cachedSummary.cachedFromPriorAudit &&
+        // Same rule as the byte-identical branch above: an audit the law has
+        // outrun is not an answer to running the audit again.
+        auditStillCurrent(
+          cachedContract.audited_at ?? cachedContract.updated_at,
+          cachedSummary,
+          await lawUpdatedAt(),
+        )
       ) {
         cachedFromPriorAudit = true;
         audit = {
