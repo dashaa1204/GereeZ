@@ -5,6 +5,7 @@ import {
   detectContractMediaType,
 } from "@/lib/audit";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { contractStoragePath } from "@/lib/storage-path";
 import {
   CONTRACTS_BUCKET,
   createAdminClient,
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminClient();
-    const storagePath = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const storagePath = contractStoragePath(user.id, file.name);
 
     const { error: uploadError } = await supabase.storage
       .from(CONTRACTS_BUCKET)

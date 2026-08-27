@@ -296,3 +296,62 @@ describe("the feed as a whole", () => {
     expect(alerts[0].id).toBe("e-later-d30");
   });
 });
+
+// Read marks are stored by alert id, and a deleted contract's marks are found
+// by looking for its id inside them (`forgetContractAlertReads`). An alert
+// about a contract whose id leaves the contract out leaks a row per user,
+// forever — nothing else will ever match it again.
+describe("alert ids", () => {
+  it("carries the contract id in every alert about a contract", () => {
+    const expiring = audited(
+      [],
+      { deposit: 3_000_000, endDate: "2026-07-04", paymentDay: 4, noticePeriodDays: 30 },
+      { id: "11111111-1111-1111-1111-111111111111", file_name: "expiring.pdf" },
+    );
+    const ended = audited(
+      [],
+      { deposit: 500_000, endDate: "2026-06-25" },
+      { id: "22222222-2222-2222-2222-222222222222", file_name: "ended.pdf" },
+    );
+    const failed = makeContract({
+      id: "33333333-3333-3333-3333-333333333333",
+      file_name: "failed.pdf",
+      status: "failed",
+      updated_at: "2026-07-01T09:00:00Z",
+    });
+    const stale = audited(
+      [makeFinding({ lawName: "Иргэний хууль" })],
+      {},
+      {
+        id: "44444444-4444-4444-4444-444444444444",
+        file_name: "stale.pdf",
+        audited_at: "2026-06-01T00:00:00Z",
+      },
+    );
+
+    const contracts = [expiring, ended, failed, stale];
+    const idByName = new Map(contracts.map((c) => [c.file_name, c.id]));
+    const alerts = feed(contracts, {
+      lawUpdatedAt: new Map([["Иргэний хууль", "2026-06-20T00:00:00Z"]]),
+    });
+
+    const aboutContracts = alerts.filter((a) => a.contractName !== null);
+    // Enough kinds to be worth asserting over: expiry, notice, payment,
+    // deposit, audit state and law update all reach the feed here.
+    expect(new Set(aboutContracts.map((a) => a.kind)).size).toBeGreaterThan(3);
+
+    for (const alert of aboutContracts) {
+      const contractId = idByName.get(alert.contractName ?? "");
+      expect(contractId, `${alert.kind}: ${alert.contractName}`).toBeDefined();
+      expect(alert.id, alert.kind).toContain(contractId!);
+    }
+  });
+
+  // The account-level alert is the exception that proves the rule: it belongs
+  // to no contract, so nothing about deleting one should touch it.
+  it("leaves the credit alert out of it", () => {
+    const credit = feed([], { credits: 0 })[0];
+    expect(credit.contractName).toBeNull();
+    expect(credit.id.startsWith("cr-")).toBe(true);
+  });
+});
