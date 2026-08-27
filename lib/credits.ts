@@ -1,15 +1,12 @@
 import { createAdminClient } from "./supabase-server";
 
-/** Credits charged per audited page. Each page is one unit of AI cost. */
-export const CREDITS_PER_PAGE = 1;
+// The price itself lives in `audit-cost.ts`, which the screens can import —
+// this module talks to the database and they cannot. Re-exported so the API
+// routes still get everything about credits from one place.
+export { auditCost, CREDITS_PER_PAGE } from "./audit-cost";
 
 /** Credits added per demo recharge top-up. */
 export const RECHARGE_AMOUNT = 100;
-
-/** Cost in credits to audit a contract of the given page count. */
-export function auditCost(pageCount: number): number {
-  return Math.max(1, pageCount) * CREDITS_PER_PAGE;
-}
 
 /** Read a user's current credit balance (0 if they have no row yet). */
 export async function getBalance(userId: string): Promise<number> {
