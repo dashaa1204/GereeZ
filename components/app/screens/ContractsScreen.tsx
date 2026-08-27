@@ -12,8 +12,10 @@ import {
   Lock,
   Plus,
   RotateCw,
+  Sparkles,
   Trash2,
 } from "lucide-react";
+import { auditCost, canAffordAudit } from "@/lib/audit-cost";
 import {
   CONTRACT_FILTERS,
   FILTER_EMPTY_HINT,
@@ -239,30 +241,81 @@ export function ContractsScreen({
           );
         }
 
+        // Uploaded but not audited. The card used to offer one thing —
+        // buy credits — which starts no audit and, with a balance already big
+        // enough, answers a question the user did not ask. What it was missing
+        // is the way to the contract, which is where the run button lives.
         if (!c.paid) {
+          const running = c.status === "running";
+          const cost = c.pages != null ? auditCost(c.pages) : null;
+          const affordable = canAffordAudit(c.pages, credits);
+          const contractHref = `/contracts/${c.id}`;
           return (
             <div key={c.id} className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="p-4 space-y-3">
                 {cardHeader(c)}
-                {/* lock overlay */}
                 <div className="rounded-xl bg-muted border border-border p-4 flex flex-col items-center gap-2.5 text-center">
-                  <Lock className="w-7 h-7 text-muted-foreground" />
+                  {running ? (
+                    <Loader2 className="text-brand size-7 animate-spin" />
+                  ) : affordable ? (
+                    <Sparkles className="size-7 text-muted-foreground" />
+                  ) : (
+                    // The lock is for the one case that is actually locked.
+                    <Lock className="w-7 h-7 text-muted-foreground" />
+                  )}
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Аудит хаалттай байна</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {running
+                        ? "Шинжилгээ хийгдэж байна"
+                        : affordable
+                          ? "Шинжилгээ хийгдээгүй байна"
+                          : "Аудит хаалттай байна"}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {c.pages != null
-                        ? `Энэ гэрээнд ${c.pages} кредит шаардагдана`
-                        : "Аудит хийлгэхэд кредит шаардлагатай"}
+                      {running
+                        ? "Дуусмагц дүн энд харагдана."
+                        : cost == null
+                          ? "Гэрээгээ нээж шинжилгээг эхлүүлнэ үү."
+                          : affordable
+                            ? `Энэ гэрээнд ${cost} кредит шаардагдана.`
+                            : `Энэ гэрээнд ${cost} кредит шаардлагатай — танд ${credits} байна.`}
                     </p>
                   </div>
-                  <button
-                    onClick={onPayment}
-                    className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    {c.pages != null ? `${c.pages} кредитээр нээх` : "Кредитээр нээх"}
-                  </button>
-                  {/* The audit is what's locked, not the document — the user
+                  {running ? (
+                    <Link
+                      href={contractHref}
+                      className="text-brand text-sm font-semibold hover:underline"
+                    >
+                      Явцыг харах
+                    </Link>
+                  ) : affordable ? (
+                    <Link
+                      href={contractHref}
+                      className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Шинжилгээ эхлүүлэх
+                    </Link>
+                  ) : (
+                    <>
+                      {/* Short on credits is the one state where buying them
+                          is the next step rather than a detour. */}
+                      <Link
+                        href="/payment"
+                        className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        Кредит цэнэглэх
+                      </Link>
+                      <Link
+                        href={contractHref}
+                        className="text-muted-foreground text-xs hover:underline"
+                      >
+                        Гэрээг нээх
+                      </Link>
+                    </>
+                  )}
+                  {/* The audit is what's missing, not the document — the user
                       uploaded that themselves and can read it whenever. */}
                   {c.hasFile && (
                     <a

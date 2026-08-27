@@ -19,6 +19,7 @@ import {
   Sparkles,
   User,
 } from "lucide-react";
+import { auditCost } from "@/lib/audit-cost";
 import { auditRunMode } from "@/lib/audit-run";
 import type { AuditFinding, ContractVM } from "@/lib/view-models";
 import type { LegalArticle } from "@/lib/legal-articles";
@@ -485,8 +486,10 @@ function RunAudit({ contract }: { contract: ContractVM }) {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mode = auditRunMode(contract);
-  const cost =
-    contract.pages != null ? `${contract.pages} кредит зарцуулна.` : null;
+  // The same rule the ledger charges by, so the button cannot quote a price
+  // the audit will not take.
+  const price = contract.pages != null ? auditCost(contract.pages) : null;
+  const cost = price != null ? `${price} кредит зарцуулна.` : null;
   const hint = {
     // A retry already knows credits come back — it just got them — so it
     // spends its second sentence on the price instead of repeating the promise.
@@ -546,7 +549,7 @@ function RunAudit({ contract }: { contract: ContractVM }) {
             : mode === "retry"
               ? "Дахин шинжлэх"
               : confirming
-                ? `Дахин дарж баталгаажуулна уу${cost ? ` — ${contract.pages} кредит` : ""}`
+                ? `Дахин дарж баталгаажуулна уу${price ? ` — ${price} кредит` : ""}`
                 : "Дахин шинжлүүлэх"}
       </button>
       {/* Two sentences at most, and they have to differ: what the run costs
