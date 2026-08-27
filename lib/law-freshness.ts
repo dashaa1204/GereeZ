@@ -11,6 +11,7 @@
  * Free of server-only imports: pure comparison over what a summary carries.
  */
 
+import { canonicalLawName } from "./contract-type";
 import type { AuditSummary } from "./types/contract";
 
 export interface LawMovement {
@@ -28,13 +29,18 @@ export function lawsBehindAudit(
   summary: AuditSummary | null | undefined,
 ): Set<string> {
   const laws = new Set<string>();
+  // Folded to the knowledge base's own names: audits stored before the audit
+  // pipeline did that carry the model's decoration («… (Mongolian Civil
+  // Code)») or a confusable letter, and those match no law update at all.
+  // Names we don't recognise are kept as they are rather than dropped — an
+  // unmatched name is a comparison that finds nothing, not a wrong one.
   for (const alert of summary?.alerts ?? []) {
     const name = alert.lawName?.trim();
-    if (name) laws.add(name);
+    if (name) laws.add(canonicalLawName(name) ?? name);
   }
   for (const article of summary?.retrievedArticles ?? []) {
     const name = article.lawName?.trim();
-    if (name) laws.add(name);
+    if (name) laws.add(canonicalLawName(name) ?? name);
   }
   return laws;
 }

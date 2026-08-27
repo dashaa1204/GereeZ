@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canonicalLawName,
   detectContractType,
   LAW_NAME_BY_CONTRACT_TYPE,
 } from "@/lib/contract-type";
@@ -89,5 +90,37 @@ describe("buildContractSearchQueries", () => {
     expect(queries[0]).toContain(RENTAL_CONTRACT.slice(0, 40));
     expect(queries.some((q) => q.includes("Дэнчин"))).toBe(true);
     expect(queries.some((q) => q.includes("анз"))).toBe(true);
+  });
+});
+
+// A law name is a join key: `law_last_updated` groups by it, and an audit is
+// matched to a law update by string comparison. The live data holds three
+// names for one law — a gloss, a stray space, and a Ukrainian і — and each of
+// them belongs to no law at all as far as the comparison is concerned.
+describe("canonicalLawName", () => {
+  it("passes the knowledge base's own names through", () => {
+    expect(canonicalLawName("Иргэний хууль")).toBe("Иргэний хууль");
+    expect(canonicalLawName("Хөдөлмөрийн тухай хууль")).toBe("Хөдөлмөрийн тухай хууль");
+  });
+
+  it("strips the English gloss the model adds", () => {
+    expect(canonicalLawName("Иргэний хууль (Mongolian Civil Code)")).toBe("Иргэний хууль");
+  });
+
+  it("folds a confusable letter back", () => {
+    // «Иргэній» — Ukrainian і (U+0456) where и belongs. Indistinguishable on
+    // screen, and a different string to every comparison.
+    expect(canonicalLawName("Иргэн\u0456й хууль (Mongolian Civil Code)")).toBe("Иргэний хууль");
+  });
+
+  it("ignores spacing and case", () => {
+    expect(canonicalLawName("  иргэний   хууль ")).toBe("Иргэний хууль");
+  });
+
+  it("returns null for a law we do not hold", () => {
+    expect(canonicalLawName("Эрүүгийн хууль")).toBeNull();
+    expect(canonicalLawName("")).toBeNull();
+    expect(canonicalLawName(null)).toBeNull();
+    expect(canonicalLawName(undefined)).toBeNull();
   });
 });

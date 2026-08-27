@@ -1,4 +1,5 @@
 import { citedArticleNumber } from "./citations";
+import { canonicalLawName } from "@/lib/contract-type";
 import { emptyContractMetadata, type AuditResultSchema } from "./schema";
 
 const SEVERITY_DEDUCTIONS = {
@@ -240,7 +241,11 @@ export function normalizeAuditResult(
     title: sanitizeTextField(alert.title),
     description: sanitizeTextField(alert.description),
     contractClause: sanitizeTextField(alert.contractClause ?? ""),
-    lawName: alert.lawName?.trim() || fallbackLawName,
+    // The name is a join key (see `canonicalLawName`), so what the model wrote
+    // is only kept when it names a law we actually hold. Anything else — a
+    // gloss, a confusable letter, an invention — becomes the law this audit was
+    // run against, which is the only one its citations could have come from.
+    lawName: canonicalLawName(alert.lawName) ?? fallbackLawName,
     articleReference: toMongolianArticleReference(alert.articleReference),
   }));
 
