@@ -75,6 +75,13 @@ export const RATE_LIMITS = {
     windowSeconds: HOUR,
     message: "Хэт олон удаа цэнэглэлээ. Хэсэг хүлээгээд дахин оролдоно уу.",
   },
+  // A metadata write with no spend behind it, but it is the one thing a
+  // signed-in user can change about their account, so it gets a ceiling too.
+  profile: {
+    limit: 30,
+    windowSeconds: HOUR,
+    message: "Хэт олон удаа өөрчиллөө. Хэсэг хүлээгээд дахин оролдоно уу.",
+  },
   // Housekeeping, and cheap: a storage remove and a row delete. Someone
   // tidying up a year of contracts should not run into a wall — and if they
   // do, it must not be the wall that also holds up their next upload.

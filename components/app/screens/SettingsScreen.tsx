@@ -19,15 +19,24 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { deleteAccount } from "@/lib/services/account.client";
+import { deleteAccount, updateProfileName } from "@/lib/services/account.client";
+import { MAX_PROFILE_NAME_LENGTH } from "@/lib/profile-name";
 import { useTheme } from "../theme";
 
+/**
+ * `canEditProfile` is false for the shared demo account, whose profile is
+ * furniture every visitor sees rather than one visitor's to change. The server
+ * refuses the rename either way (`app/api/account`) — this keeps the app from
+ * offering an edit it is going to reject.
+ */
 export function SettingsScreen({
   userName,
   userEmail,
+  canEditProfile = true,
 }: {
   userName: string | null;
   userEmail: string | null;
+  canEditProfile?: boolean;
 }) {
   const router = useRouter();
   const { dark, toggle } = useTheme();
@@ -48,11 +57,7 @@ export function SettingsScreen({
     setSavingName(true);
     setError(null);
     try {
-      const supabase = createClient();
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { full_name: name },
-      });
-      if (updateError) throw updateError;
+      await updateProfileName(name);
       setEditingName(false);
       router.refresh();
     } catch (err) {
@@ -107,7 +112,7 @@ export function SettingsScreen({
           {displayName.charAt(0)}
         </div>
         <div className="min-w-0 flex-1">
-          {editingName ? (
+          {editingName && canEditProfile ? (
             <div className="flex items-center gap-1.5">
               <input
                 value={nameDraft}
@@ -115,7 +120,7 @@ export function SettingsScreen({
                 onKeyDown={(e) => e.key === "Enter" && saveName()}
                 disabled={savingName}
                 autoFocus
-                maxLength={60}
+                maxLength={MAX_PROFILE_NAME_LENGTH}
                 className="focus:border-brand h-8 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-none"
                 placeholder="Таны нэр"
               />
@@ -146,16 +151,24 @@ export function SettingsScreen({
           ) : (
             <div className="flex items-center gap-1.5">
               <p className="font-semibold text-foreground capitalize truncate">{displayName}</p>
-              <button
-                onClick={() => setEditingName(true)}
-                aria-label="Нэр засах"
-                className="shrink-0 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <Pencil className="size-3.5" />
-              </button>
+              {canEditProfile && (
+                <button
+                  onClick={() => setEditingName(true)}
+                  aria-label="Нэр засах"
+                  className="shrink-0 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+              )}
             </div>
           )}
           <p className="text-sm text-muted-foreground truncate">{userEmail ?? "—"}</p>
+          {!canEditProfile && (
+            <p className="mt-1 text-xs text-muted-foreground/80">
+              Демо бүртгэлийг бүх зочин хуваалцдаг тул профайлыг өөрчлөх
+              боломжгүй.
+            </p>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  DEMO_USER_NAME,
   demoCredentials,
+  demoNameDrifted,
   isDemoAutoLoginEnabled,
   isDemoEmail,
   safeDemoRedirect,
@@ -92,5 +94,31 @@ describe("safeDemoRedirect", () => {
   it("sends the landing page to the dashboard", () => {
     // "/" is the marketing page; a just-signed-in visitor belongs in the app.
     expect(safeDemoRedirect("/")).toBe(DASHBOARD_PATH);
+  });
+});
+
+// The demo profile is shared furniture: one visitor's rename is what every
+// later visitor sees, so `/demo` puts it back when it has moved.
+describe("demoNameDrifted", () => {
+  it("accepts the seeded name", () => {
+    expect(demoNameDrifted(DEMO_USER_NAME)).toBe(false);
+  });
+
+  it("ignores surrounding whitespace", () => {
+    expect(demoNameDrifted(`  ${DEMO_USER_NAME}  `)).toBe(false);
+  });
+
+  it("catches a rename", () => {
+    expect(demoNameDrifted("Хакер")).toBe(true);
+  });
+
+  // A cleared name leaves the avatar and header with nothing to show, so an
+  // empty string counts as drifted rather than as "no name set".
+  it("catches a cleared or missing name", () => {
+    expect(demoNameDrifted("")).toBe(true);
+    expect(demoNameDrifted("   ")).toBe(true);
+    expect(demoNameDrifted(undefined)).toBe(true);
+    expect(demoNameDrifted(null)).toBe(true);
+    expect(demoNameDrifted(123)).toBe(true);
   });
 });

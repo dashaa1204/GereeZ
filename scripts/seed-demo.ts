@@ -12,6 +12,7 @@
  * counter keeps working months from now.
  */
 import { createClient } from "@supabase/supabase-js";
+import { DEMO_USER_NAME } from "../lib/demo-user";
 import type { AuditSummary } from "../lib/types/contract";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -239,7 +240,7 @@ async function findOrCreateUser(): Promise<string> {
     // Keep the password and display name in sync with the env on every run.
     const { error } = await supabase.auth.admin.updateUserById(existing.id, {
       password,
-      user_metadata: { full_name: "Демо хэрэглэгч" },
+      user_metadata: { full_name: DEMO_USER_NAME },
     });
     if (error) throw new Error(`updateUser failed: ${error.message}`);
     console.log(`demo user exists → ${existing.id}`);
@@ -250,7 +251,7 @@ async function findOrCreateUser(): Promise<string> {
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: "Демо хэрэглэгч" },
+    user_metadata: { full_name: DEMO_USER_NAME },
   });
   if (error || !data.user) {
     throw new Error(`createUser failed: ${error?.message ?? "no user"}`);
