@@ -200,6 +200,7 @@ export function AuditScreen({ contract }: { contract: ContractVM }) {
             contractId={contract.id}
             issueCount={highCount + medCount}
             initialProposal={contract.proposal}
+            runsLeft={contract.proposalRunsLeft}
           />
         )}
       </div>

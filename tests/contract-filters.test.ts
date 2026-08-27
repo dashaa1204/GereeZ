@@ -4,6 +4,7 @@ import {
   matchesFilter,
   parseFilter,
 } from "@/lib/contract-filters";
+import { PROPOSAL_RUNS_PER_AUDIT } from "@/lib/proposal-quota";
 import type { ContractVM } from "@/lib/view-models";
 
 function contract(overrides: Partial<ContractVM>): ContractVM {
@@ -34,6 +35,7 @@ function contract(overrides: Partial<ContractVM>): ContractVM {
     expired: false,
     highRisk: false,
     proposal: null,
+    proposalRunsLeft: PROPOSAL_RUNS_PER_AUDIT,
     ...overrides,
   };
 }

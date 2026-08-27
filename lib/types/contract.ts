@@ -94,6 +94,12 @@ export interface AuditSummary {
   contractType?: ContractType;
   /** Cached correction letter generated from this audit, so it survives navigation. */
   proposal?: string;
+  /**
+   * Letter generations spent on this contract, against the allowance the audit
+   * paid for (`lib/proposal-quota.ts`). Absent on letters saved before the
+   * counter shipped — read it through `proposalRunsUsed`, never directly.
+   */
+  proposalRuns?: number;
   demoMode?: boolean;
 }
 

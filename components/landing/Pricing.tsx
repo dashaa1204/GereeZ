@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { ArrowRight, Check, Info } from "lucide-react";
 import { Eyebrow } from "@/components/app/kit";
+import { PROPOSAL_RUNS_PER_AUDIT } from "@/lib/proposal-quota";
 
 const included = [
   "Хуудас бүрийн бүрэн хуулийн шинжилгээ",
   "Нийцлийн оноо ба эрсдэлийн зэрэглэл",
   "Иргэний хуулийн зүйл, заалтын ишлэл",
   "Гэрээний мэдээлэл автоматаар салгах",
-  "Засварын захидлын төсөл",
+  `Засварын захидлын төсөл — ${PROPOSAL_RUNS_PER_AUDIT} хүртэл хувилбар`,
   "Хугацаа дуусах сануулга",
 ];
 

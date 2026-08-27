@@ -7,6 +7,7 @@ import {
   Table2,
 } from "lucide-react";
 import { Eyebrow } from "@/components/app/kit";
+import { PROPOSAL_RUNS_PER_AUDIT } from "@/lib/proposal-quota";
 
 const features = [
   {
@@ -27,7 +28,7 @@ const features = [
   {
     icon: Mail,
     title: "Засварын захидал",
-    body: "Олдсон зөрчил дээр тулгуурлан гэрээний нөгөө тал руу илгээхэд бэлэн албан ёсны захидлыг боловсруулж өгнө.",
+    body: `Олдсон зөрчил дээр тулгуурлан гэрээний нөгөө тал руу илгээхэд бэлэн албан ёсны захидлыг боловсруулж өгнө. Шинжилгээний үнэд багтсан — нэг гэрээнд ${PROPOSAL_RUNS_PER_AUDIT} хүртэл хувилбар үүсгэнэ.`,
   },
   {
     icon: BellRing,
