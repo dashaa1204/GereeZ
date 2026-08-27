@@ -41,3 +41,26 @@ export function proposalRunsUsed(summary: AuditSummary | null): number {
 export function proposalRunsLeft(summary: AuditSummary | null): number {
   return Math.max(0, PROPOSAL_RUNS_PER_AUDIT - proposalRunsUsed(summary));
 }
+
+/**
+ * The letter state a cached audit inherits from the audit it reuses.
+ *
+ * A cache hit is not a new audit — it is the source's audit, copied onto this
+ * contract, and it is not charged for. Its letters come with it, spent ones
+ * included: without that, re-uploading the same document would mint a fresh
+ * allowance every time and turn "included with the audit" into an unlimited
+ * supply of free model calls bought once.
+ *
+ * A paid re-run is the opposite case and must NOT call this — the user bought a
+ * new audit, so it comes with new letters, and the old one is about findings
+ * that have just been replaced.
+ */
+export function inheritedProposalState(
+  source: AuditSummary | null | undefined,
+): Pick<AuditSummary, "proposal" | "proposalRuns"> {
+  if (!source) return {};
+  return {
+    ...(source.proposal ? { proposal: source.proposal } : {}),
+    proposalRuns: proposalRunsUsed(source),
+  };
+}

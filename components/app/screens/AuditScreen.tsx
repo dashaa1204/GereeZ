@@ -20,7 +20,7 @@ import {
   User,
 } from "lucide-react";
 import { auditCost } from "@/lib/audit-cost";
-import { auditRunMode } from "@/lib/audit-run";
+import { auditRunHint, auditRunMode } from "@/lib/audit-run";
 import type { AuditFinding, ContractVM } from "@/lib/view-models";
 import type { LegalArticle } from "@/lib/legal-articles";
 import { auditContract } from "@/lib/services/contracts.client";
@@ -489,21 +489,10 @@ function RunAudit({ contract }: { contract: ContractVM }) {
   // The same rule the ledger charges by, so the button cannot quote a price
   // the audit will not take.
   const price = contract.pages != null ? auditCost(contract.pages) : null;
-  const cost = price != null ? `${price} кредит зарцуулна.` : null;
-  const hint = {
-    // A retry already knows credits come back — it just got them — so it
-    // spends its second sentence on the price instead of repeating the promise.
-    retry: ["Өмнөх оролдлогын кредит буцаагдсан.", cost],
-    fresh: [cost, "Амжилтгүй бол кредит буцаана."],
-    // Nothing was refunded here: the audit on screen was delivered and paid
-    // for. Saying so is the difference between a price and a surprise.
-    rerun: [
-      "Энэ нь шинэ шинжилгээ — өмнөх дүн хадгалагдсан хэвээр.",
-      cost ?? "Хуудас тутамд кредит дахин зарцуулна.",
-    ],
-  }[mode]
-    .filter(Boolean)
-    .join(" ");
+  const hint = auditRunHint(mode, {
+    price,
+    hasProposal: Boolean(contract.proposal),
+  });
 
   async function run() {
     if (mode === "rerun" && !confirming) {
