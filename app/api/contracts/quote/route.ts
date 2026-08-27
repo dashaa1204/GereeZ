@@ -4,7 +4,7 @@ import {
   getPdfPageCount,
 } from "@/lib/audit";
 import { formatUserError } from "@/lib/api-errors";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { auditCost, getBalance } from "@/lib/credits";
 import {
   CONTRACTS_BUCKET,
@@ -26,13 +26,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Нэвтэрнэ үү" }, { status: 401 });
     }
 
-    const rateLimit = await checkRateLimit("upload", user.id);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Хэт олон хүсэлт. Хэсэг хүлээгээд дахин оролдоно уу." },
-        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
-      );
-    }
+    const rateLimit = await checkRateLimit("quote", user.id);
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
     const body = await request.json();
     const contractId = body?.contractId as string | undefined;

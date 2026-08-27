@@ -4,7 +4,7 @@ import {
   ACCEPTED_MEDIA_TYPES,
   detectContractMediaType,
 } from "@/lib/audit";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import {
   CONTRACTS_BUCKET,
   createAdminClient,
@@ -26,12 +26,7 @@ export async function POST(request: Request) {
     }
 
     const rateLimit = await checkRateLimit("upload", user.id);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Хэт олон хүсэлт. Хэсэг хүлээгээд дахин оролдоно уу." },
-        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
-      );
-    }
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
     const formData = await request.formData();
     const file = formData.get("file");

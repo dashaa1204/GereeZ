@@ -6,7 +6,7 @@ import {
   proposalRunsLeft,
   proposalRunsUsed,
 } from "@/lib/proposal-quota";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { createAdminClient, getAuthenticatedUser } from "@/lib/supabase-server";
 import type { AuditSummary, Contract } from "@/lib/types/contract";
 
@@ -35,12 +35,7 @@ export async function POST(
     }
 
     const rateLimit = await checkRateLimit("proposal", user.id);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Хэт олон хүсэлт. Хэсэг хүлээгээд дахин оролдоно уу." },
-        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
-      );
-    }
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
     const { id } = await params;
     const supabase = createAdminClient();

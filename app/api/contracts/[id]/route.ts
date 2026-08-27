@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { formatUserError } from "@/lib/api-errors";
 import { isDemoEmail } from "@/lib/demo-user";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import {
   CONTRACTS_BUCKET,
   createAdminClient,
@@ -34,13 +34,8 @@ export async function DELETE(
       );
     }
 
-    const rateLimit = await checkRateLimit("upload", user.id);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Хэт олон хүсэлт. Хэсэг хүлээгээд дахин оролдоно уу." },
-        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
-      );
-    }
+    const rateLimit = await checkRateLimit("delete-contract", user.id);
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
     const { id } = await params;
     const supabase = createAdminClient();
