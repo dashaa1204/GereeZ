@@ -8,6 +8,64 @@ export const LAW_NAME_BY_CONTRACT_TYPE: Record<ContractType, string> = {
   employment: "Хөдөлмөрийн тухай хууль",
 };
 
+/**
+ * The law names the knowledge base actually uses, and the only ones an audit
+ * may be stored under.
+ *
+ * A law name is a join key, not prose: `law_last_updated` groups the ingested
+ * chunks by it, and an audit is matched to a law update by comparing the two
+ * strings. So a finding stored as «Иргэний хууль (Mongolian Civil Code)» — or
+ * «Иргэній хууль», with a Ukrainian і the model slipped in — belongs to no law
+ * at all as far as the app is concerned: it can never be flagged when that law
+ * changes, and never re-checked against it.
+ *
+ * All three of those are in the live data, from findings whose name came
+ * straight out of the model. This maps such a string back to the name the
+ * knowledge base knows, or returns null when it is nothing we recognise.
+ */
+const CANONICAL_LAW_NAMES: readonly string[] = Object.values(
+  LAW_NAME_BY_CONTRACT_TYPE,
+);
+
+/**
+ * Cyrillic letters that look like the ones we want and are not them. The model
+ * reaches for these occasionally; a reader cannot tell the difference and the
+ * database can tell nothing else.
+ */
+const CONFUSABLES: Record<string, string> = {
+  "і": "и", // і (Ukrainian) → и
+  "ї": "й", // ї → й
+  "ӏ": "и", // ӏ → и
+};
+
+/** Comparison form: letters only, confusables folded, lower case. */
+function lawNameKey(name: string): string {
+  return [...name.trim().toLowerCase()]
+    .map((ch) => CONFUSABLES[ch] ?? ch)
+    .join("")
+    .replace(/[^\p{L}]/gu, "");
+}
+
+/**
+ * The knowledge base's name for this law, or null when the string names no law
+ * we have. Tolerates the decoration the model adds — a trailing English gloss,
+ * stray spaces, a confusable letter — because the alternative is a finding that
+ * silently drops out of every law-update comparison.
+ */
+export function canonicalLawName(
+  name: string | null | undefined,
+): string | null {
+  if (!name) return null;
+  const key = lawNameKey(name);
+  if (!key) return null;
+  for (const canonical of CANONICAL_LAW_NAMES) {
+    const canonicalKey = lawNameKey(canonical);
+    // `startsWith` covers the gloss: "иргэнийхуульmongoliancivilcode".
+    if (key === canonicalKey || key.startsWith(canonicalKey)) return canonical;
+  }
+  return null;
+}
+
 // Weighted markers, scored by occurrence count. Phrases that name the
 // contract or a party outright weigh most; topic words that appear in both
 // contract types (гэрээ, төлбөр, хугацаа, цуцлах…) are deliberately left out.
