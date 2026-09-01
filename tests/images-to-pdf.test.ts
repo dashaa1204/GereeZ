@@ -56,6 +56,13 @@ describe("jpegInfo", () => {
 });
 
 describe("buildPdfFromJpegs", () => {
+  // The only test in the suite that loads a PDF parser, and it pays for the
+  // whole of pdf-parse on the first call: measured at ~3.1s against 4ms for a
+  // second call in the same process, against a 5s default budget. Building the
+  // four JPEGs costs ~70ms of that. Alone it passed; sharing a machine with the
+  // rest of the suite it failed about half the time, which is a flake in the
+  // budget rather than in the code under test — so the budget is stated here,
+  // where the reason is, instead of loosened for every other test.
   it("produces a PDF that the production parser reads with the right page count", async () => {
     const pages = [
       await makeJpeg(320, 240),
@@ -70,7 +77,7 @@ describe("buildPdfFromJpegs", () => {
     expect(detectContractMediaType(buffer)).toBe("application/pdf");
     // Same page counter the quote route uses to price the audit.
     expect(await getPdfPageCount(buffer)).toBe(pages.length);
-  });
+  }, 20_000);
 
   it("embeds each JPEG's bytes verbatim (DCTDecode passthrough)", async () => {
     const page = await makeJpeg(100, 80);
