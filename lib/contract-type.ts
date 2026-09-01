@@ -40,7 +40,11 @@ const CONFUSABLES: Record<string, string> = {
 
 /** Comparison form: letters only, confusables folded, lower case. */
 function lawNameKey(name: string): string {
-  return [...name.trim().toLowerCase()]
+  // Composed first. «й» has a decomposed form — и plus a combining breve — and
+  // text that has been through a macOS file name or some PDF extractors
+  // arrives that way. The breve is a mark, not a letter, so the strip below
+  // would drop it and leave «иргэнии», a name that matches nothing.
+  return [...name.normalize("NFC").trim().toLowerCase()]
     .map((ch) => CONFUSABLES[ch] ?? ch)
     .join("")
     .replace(/[^\p{L}]/gu, "");

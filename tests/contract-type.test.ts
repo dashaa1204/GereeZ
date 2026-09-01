@@ -113,6 +113,16 @@ describe("canonicalLawName", () => {
     expect(canonicalLawName("Иргэн\u0456й хууль (Mongolian Civil Code)")).toBe("Иргэний хууль");
   });
 
+  it("folds a decomposed «й» back", () => {
+    // и + U+0306 renders as й and is what some PDF extractors and macOS file
+    // names hand over. The breve is a mark, not a letter, so a key built
+    // without composing first reads «иргэнии» and matches nothing.
+    for (const name of Object.values(LAW_NAME_BY_CONTRACT_TYPE)) {
+      expect(name.normalize("NFD")).not.toBe(name);
+      expect(canonicalLawName(name.normalize("NFD"))).toBe(name);
+    }
+  });
+
   it("ignores spacing and case", () => {
     expect(canonicalLawName("  иргэний   хууль ")).toBe("Иргэний хууль");
   });

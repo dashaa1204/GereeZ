@@ -1,3 +1,4 @@
+import { canonicalLawName } from "@/lib/contract-type";
 import { createAdminClient } from "@/lib/supabase-server";
 
 /** The stored statute text behind a cited article, shown under a finding. */
@@ -96,7 +97,20 @@ export async function getLawLastUpdated(): Promise<Map<string, string>> {
       return new Map();
     }
     const rows = (data ?? []) as { law_name: string; last_updated: string }[];
-    return new Map(rows.map((row) => [row.law_name, row.last_updated]));
+    // Keyed the same way `lawsBehindAudit` names the laws it reads out of an
+    // audit, or the comparison is folded on one side only: an audit that says
+    // «Иргэний хууль» would look up a row stored under a decorated spelling
+    // and find nothing, which reads as "the law has not moved" — the failure
+    // nobody sees. Two spellings of one law collapse to their newest ingest,
+    // since that is the version the chunks under either name now hold.
+    const versions = new Map<string, string>();
+    for (const row of rows) {
+      const law = canonicalLawName(row.law_name) ?? row.law_name;
+      const seen = versions.get(law);
+      if (seen && !(Date.parse(row.last_updated) > Date.parse(seen))) continue;
+      versions.set(law, row.last_updated);
+    }
+    return versions;
   } catch (err) {
     // Missing service-role env: same fail-soft as a query error.
     lawVersionsUnavailable = true;
