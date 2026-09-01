@@ -123,6 +123,38 @@ describe("canonicalLawName", () => {
     }
   });
 
+  it("folds a Latin letter that crossed into the middle of a name", () => {
+    // Both scripts are on the same keyboard, and the model is already writing
+    // Latin in the gloss beside the name.
+    expect(canonicalLawName("Иpгэний хууль")).toBe("Иргэний хууль"); // Latin p
+    expect(canonicalLawName("Иргэний хyyль")).toBe("Иргэний хууль"); // Latin y
+    expect(canonicalLawName("Хөдөлмөрийн туxaй хууль")).toBe(
+      "Хөдөлмөрийн тухай хууль",
+    ); // Latin x, a
+    // Twins only as capitals, so the fold has to survive lower-casing.
+    expect(canonicalLawName("ИPГЭНИЙ ХУУЛЬ")).toBe("Иргэний хууль"); // Latin P
+  });
+
+  it("reads a law cited in a case ending, which is how Mongolian cites one", () => {
+    expect(canonicalLawName("Иргэний хуулийн 296.1 дүгээр зүйл")).toBe(
+      "Иргэний хууль",
+    );
+    expect(canonicalLawName("Иргэний хуульд")).toBe("Иргэний хууль");
+    expect(canonicalLawName("Иргэний хуулиар")).toBe("Иргэний хууль");
+    expect(canonicalLawName("Хөдөлмөрийн тухай хуулийн 21 дүгээр зүйл")).toBe(
+      "Хөдөлмөрийн тухай хууль",
+    );
+  });
+
+  it("knows the Labor Law by its everyday name", () => {
+    // Not a decoration of «Хөдөлмөрийн тухай хууль» — «тухай» is simply absent,
+    // and no folding recovers a missing word.
+    expect(canonicalLawName("Хөдөлмөрийн хууль")).toBe("Хөдөлмөрийн тухай хууль");
+    expect(canonicalLawName("Хөдөлмөрийн хуулийн 21.2")).toBe(
+      "Хөдөлмөрийн тухай хууль",
+    );
+  });
+
   it("ignores spacing and case", () => {
     expect(canonicalLawName("  иргэний   хууль ")).toBe("Иргэний хууль");
   });
@@ -132,5 +164,19 @@ describe("canonicalLawName", () => {
     expect(canonicalLawName("")).toBeNull();
     expect(canonicalLawName(null)).toBeNull();
     expect(canonicalLawName(undefined)).toBeNull();
+  });
+
+  it("does not swallow a different law that starts out sounding like ours", () => {
+    // The looser the fold, the more this matters: these are separate statutes
+    // we hold no text for, and answering with the wrong one is worse than
+    // answering with nothing.
+    expect(canonicalLawName("Иргэний нисэхийн тухай хууль")).toBeNull();
+    expect(
+      canonicalLawName("Иргэний хэрэг шүүхэд хянан шийдвэрлэх тухай хууль"),
+    ).toBeNull();
+    expect(canonicalLawName("Хөдөлмөр эрхлэлтийг дэмжих тухай хууль")).toBeNull();
+    expect(canonicalLawName("Нийгмийн даатгалын тухай хууль")).toBeNull();
+    // A gloss on its own names nothing: the Cyrillic name is what we match.
+    expect(canonicalLawName("Mongolian Civil Code")).toBeNull();
   });
 });
