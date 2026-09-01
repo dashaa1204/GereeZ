@@ -235,19 +235,45 @@ export function normalizeAuditResult(
   result: AuditResultSchema,
   fallbackLawName = "Иргэний хууль",
 ): AuditResultSchema {
-  const rawAlerts = result.alerts.map((alert) => ({
-    severity: alert.severity,
-    confidence: alert.confidence,
-    title: sanitizeTextField(alert.title),
-    description: sanitizeTextField(alert.description),
-    contractClause: sanitizeTextField(alert.contractClause ?? ""),
+  const rawAlerts = result.alerts.map((alert) => {
     // The name is a join key (see `canonicalLawName`), so what the model wrote
     // is only kept when it names a law we actually hold. Anything else — a
     // gloss, a confusable letter, an invention — becomes the law this audit was
-    // run against, which is the only one its citations could have come from.
-    lawName: canonicalLawName(alert.lawName) ?? fallbackLawName,
-    articleReference: toMongolianArticleReference(alert.articleReference),
-  }));
+    // run against, so the finding is still measured against a law when that one
+    // is amended.
+    const named = canonicalLawName(alert.lawName);
+
+    // …but an unrecognised name is evidence about the citation, not only about
+    // the label. Retrieval put one law in front of the model, named in the
+    // prompt, and this is not it — so the article number beside it did not come
+    // from that context. Carrying it over to the audited law would point the
+    // statute panel at whatever article happens to hold that number there, and
+    // print the wrong law's text under the finding, which is the mistake
+    // ./citations exists to prevent. The finding keeps its canonical join key
+    // and loses the reference, exactly the trade `groundCitations` makes below.
+    const offLaw = !named && Boolean(alert.lawName?.trim());
+    const articleReference = toMongolianArticleReference(alert.articleReference);
+    if (offLaw && articleReference) {
+      console.warn(
+        `Off-law citation dropped: ${alert.lawName} ${articleReference} (${alert.title})`,
+      );
+    }
+
+    return {
+      severity: alert.severity,
+      // Only a citation actually dropped costs confidence. A finding that never
+      // carried one is capped later (see `capUncitedConfidence`), which is a
+      // gentler rule and the right one for an observation about the contract
+      // text that names no statute in the first place.
+      confidence:
+        offLaw && articleReference ? ("low" as const) : alert.confidence,
+      title: sanitizeTextField(alert.title),
+      description: sanitizeTextField(alert.description),
+      contractClause: sanitizeTextField(alert.contractClause ?? ""),
+      lawName: named ?? fallbackLawName,
+      articleReference: offLaw ? "" : articleReference,
+    };
+  });
 
   const alerts = deduplicateAlerts(rawAlerts.filter((a) => a.title));
   const strengths = filterStrengthsAgainstAlerts(

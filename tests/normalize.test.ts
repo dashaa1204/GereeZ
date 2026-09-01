@@ -100,6 +100,65 @@ describe("normalizeAuditResult — alerts", () => {
     );
     expect(result.alerts[0].lawName).toBe("Иргэний хууль");
   });
+
+  it("keeps the citation of a law we hold, whatever the model called it", () => {
+    const result = normalizeAuditResult(
+      makeResult({
+        alerts: [
+          makeAlert({
+            lawName: "Иргэний хуулийн (Mongolian Civil Code)",
+            articleReference: "295 дүгээр зүйл",
+            confidence: "high",
+          }),
+        ],
+      }),
+    );
+    expect(result.alerts[0].lawName).toBe("Иргэний хууль");
+    expect(result.alerts[0].articleReference).toBe("295 дүгээр зүйл");
+    expect(result.alerts[0].confidence).toBe("high");
+  });
+
+  it("drops the citation when the finding names a law we do not hold", () => {
+    // Retrieval put one law in front of the model, named in the prompt, so an
+    // article beside a different law's name did not come from that context.
+    // Carrying the number over to the audited law would print article 15 of
+    // the Labor Law under a finding about social insurance.
+    const result = normalizeAuditResult(
+      makeResult({
+        alerts: [
+          makeAlert({
+            lawName: "Нийгмийн даатгалын тухай хууль",
+            articleReference: "15.1 дүгээр зүйл",
+            confidence: "high",
+          }),
+        ],
+      }),
+      "Хөдөлмөрийн тухай хууль",
+    );
+    // The join key survives — the finding still belongs to the law this audit
+    // was measured against, and moves when that law does.
+    expect(result.alerts[0].lawName).toBe("Хөдөлмөрийн тухай хууль");
+    expect(result.alerts[0].articleReference).toBe("");
+    expect(result.alerts[0].confidence).toBe("low");
+  });
+
+  it("does not punish a finding that never claimed an article", () => {
+    // Nothing was dropped, so nothing is owed: an unsourced observation about
+    // the contract text is capped elsewhere, not pushed to "low" here.
+    const result = normalizeAuditResult(
+      makeResult({
+        alerts: [
+          makeAlert({
+            lawName: "Нийгмийн даатгалын тухай хууль",
+            articleReference: "",
+            confidence: "medium",
+          }),
+        ],
+      }),
+    );
+    expect(result.alerts[0].lawName).toBe("Иргэний хууль");
+    expect(result.alerts[0].confidence).toBe("medium");
+  });
 });
 
 describe("normalizeAuditResult — metadata", () => {
