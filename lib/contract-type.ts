@@ -28,29 +28,85 @@ const CANONICAL_LAW_NAMES: readonly string[] = Object.values(
 );
 
 /**
- * Cyrillic letters that look like the ones we want and are not them. The model
- * reaches for these occasionally; a reader cannot tell the difference and the
- * database can tell nothing else.
+ * Letters that look like the ones we want and are not them. The model reaches
+ * for these occasionally; a reader cannot tell the difference and the database
+ * can tell nothing else.
  */
 const CONFUSABLES: Record<string, string> = {
+  // Cyrillic letters belonging to other alphabets. «Иргэній хууль» is in the
+  // live data with the first of these.
   "і": "и", // і (Ukrainian) → и
   "ї": "й", // ї → й
   "ӏ": "и", // ӏ → и
+  // Latin. Both scripts sit on the same keyboard and every English gloss the
+  // model writes is already Latin, so one letter crossing over mid-word is the
+  // likeliest way one of these names comes back wrong. The name is lower-cased
+  // before the fold, which is why pairs that are twins only as capitals —
+  // В/B, Н/H, К/K, М/M, Т/T — are listed here in lower case.
+  a: "а",
+  b: "в",
+  c: "с",
+  e: "е",
+  h: "н",
+  k: "к",
+  m: "м",
+  o: "о",
+  p: "р",
+  t: "т",
+  x: "х",
+  y: "у",
 };
 
-/** Comparison form: letters only, confusables folded, lower case. */
+/**
+ * Comparison form: letters only, confusables folded, lower case, and the soft
+ * and hard signs dropped.
+ *
+ * Dropping ь is what lets a declined name match the nominative one the
+ * knowledge base is keyed by. Mongolian cites a statute in the genitive —
+ * «Иргэний хуулийн 296 дугаар зүйл» — and the prefix test below compares that
+ * against «Иргэний хууль», where the ь is exactly the letter the suffix
+ * replaces. Without this, every case ending («хуульд», «хуулиар», «хуулийн»)
+ * is a law we do not recognise; with it, they all still open with the stem
+ * «иргэнийхуул».
+ */
 function lawNameKey(name: string): string {
-  return [...name.trim().toLowerCase()]
+  // Composed first. «й» has a decomposed form — и plus a combining breve — and
+  // text that has been through a macOS file name or some PDF extractors
+  // arrives that way. The breve is a mark, not a letter, so the strip below
+  // would drop it and leave «иргэнии», a name that matches nothing.
+  return [...name.normalize("NFC").trim().toLowerCase()]
     .map((ch) => CONFUSABLES[ch] ?? ch)
     .join("")
-    .replace(/[^\p{L}]/gu, "");
+    .replace(/[^\p{L}]/gu, "")
+    .replace(/[ьъ]/g, "");
 }
+
+/**
+ * What a law is called when nobody is reading its title page, paired with the
+ * name the knowledge base holds it under.
+ *
+ * «Хөдөлмөрийн хууль» is how the Labor Law is named in ordinary Mongolian, and
+ * it is not a decoration of «Хөдөлмөрийн тухай хууль» that any amount of
+ * folding recovers — the words differ. A model writing a finding in plain
+ * Mongolian reaches for the short form, and that finding then belongs to no
+ * law at all.
+ */
+const LAW_NAME_ALIASES: ReadonlyArray<readonly [string, string]> = [
+  ["Хөдөлмөрийн хууль", LAW_NAME_BY_CONTRACT_TYPE.employment],
+];
 
 /**
  * The knowledge base's name for this law, or null when the string names no law
  * we have. Tolerates the decoration the model adds — a trailing English gloss,
- * stray spaces, a confusable letter — because the alternative is a finding that
- * silently drops out of every law-update comparison.
+ * stray spaces, a confusable letter, a case ending, the everyday short name —
+ * because the alternative is a finding that silently drops out of every
+ * law-update comparison.
+ *
+ * The prefix rule does mean that a *different* statute whose title opens with
+ * one of these names folds into it — «Хөдөлмөрийн тухай хуулийг дагаж мөрдөх
+ * журмын тухай хууль» reads as the Labor Law. That is the same trade the gloss
+ * makes: we hold neither, so the alternative is not a better answer but no
+ * answer, and the near miss at least points at the right subject.
  */
 export function canonicalLawName(
   name: string | null | undefined,
@@ -58,10 +114,16 @@ export function canonicalLawName(
   if (!name) return null;
   const key = lawNameKey(name);
   if (!key) return null;
-  for (const canonical of CANONICAL_LAW_NAMES) {
-    const canonicalKey = lawNameKey(canonical);
-    // `startsWith` covers the gloss: "иргэнийхуульmongoliancivilcode".
-    if (key === canonicalKey || key.startsWith(canonicalKey)) return canonical;
+  const candidates: ReadonlyArray<readonly [string, string]> = [
+    ...CANONICAL_LAW_NAMES.map((canonical) => [canonical, canonical] as const),
+    ...LAW_NAME_ALIASES,
+  ];
+  for (const [spelling, canonical] of candidates) {
+    const spellingKey = lawNameKey(spelling);
+    // `startsWith` covers the gloss ("иргэнийхуулmongoliancivilcode") and the
+    // case ending ("иргэнийхуулийн296дугаарзүйл") alike — both are the stem
+    // plus something.
+    if (key === spellingKey || key.startsWith(spellingKey)) return canonical;
   }
   return null;
 }

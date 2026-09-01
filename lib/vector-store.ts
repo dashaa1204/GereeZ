@@ -1,4 +1,8 @@
-import { LAW_NAME_BY_CONTRACT_TYPE, type ContractType } from "@/lib/contract-type";
+import {
+  canonicalLawName,
+  LAW_NAME_BY_CONTRACT_TYPE,
+  type ContractType,
+} from "@/lib/contract-type";
 import { embedTexts, embedText } from "@/lib/embeddings";
 import { chunkLegalDocument, type LegalChunk } from "@/lib/legal-chunker";
 import { createAdminClient } from "@/lib/supabase-server";
@@ -59,19 +63,43 @@ function buildChunkEmbeddingText(chunk: LegalChunk, lawName: string): string {
   return `${header}\n\n${chunk.content}`;
 }
 
-/** Ingest a full legal text file into Supabase pgvector. */
+/**
+ * Ingest a full legal text file into Supabase pgvector.
+ *
+ * The law name is the join key the rest of the app reads by — retrieval
+ * filters on it exactly, `law_last_updated` groups by it, an audit is matched
+ * to a law update by comparing the two strings — and this is the one place it
+ * is written. Both callers take it from free text (a form field, an argv), so
+ * a stray space or an English gloss would ingest a law nothing can ever ask
+ * for: every search filters by `LAW_NAME_BY_CONTRACT_TYPE`, so the chunks
+ * would sit there unread and the audits would run with no law behind them.
+ * Recognised spellings fold to the knowledge base's own name; anything else is
+ * refused here, where the mistake is one command old and costs nothing.
+ */
 export async function ingestLegalText(
   lawName: string,
   rawText: string,
   options?: { replaceExisting?: boolean },
 ): Promise<IngestResult> {
+  const canonical = canonicalLawName(lawName);
+  if (!canonical) {
+    const known = Object.values(LAW_NAME_BY_CONTRACT_TYPE)
+      .map((name) => `"${name}"`)
+      .join(", ");
+    throw new Error(
+      `Unknown law name "${lawName}". Retrieval only ever asks for ${known}, ` +
+        "so chunks stored under any other name can never be read back — add " +
+        "the law to LAW_NAME_BY_CONTRACT_TYPE first.",
+    );
+  }
+
   const supabase = createAdminClient();
 
   if (options?.replaceExisting !== false) {
     const { error: deleteError } = await supabase
       .from("legal_documents")
       .delete()
-      .eq("law_name", lawName);
+      .eq("law_name", canonical);
 
     if (deleteError) {
       throw new Error(`Failed to clear existing documents: ${deleteError.message}`);
@@ -84,7 +112,7 @@ export async function ingestLegalText(
   }
 
   const embeddingTexts = chunks.map((chunk) =>
-    buildChunkEmbeddingText(chunk, lawName),
+    buildChunkEmbeddingText(chunk, canonical),
   );
 
   console.log(`Embedding ${embeddingTexts.length} chunks (free tier: ~8 min)…`);
@@ -96,7 +124,7 @@ export async function ingestLegalText(
   });
 
   const rows = chunks.map((chunk, index) => ({
-    law_name: lawName,
+    law_name: canonical,
     article_number: chunk.articleNumber,
     section_title: chunk.sectionTitle,
     content: chunk.content,
@@ -116,7 +144,7 @@ export async function ingestLegalText(
     chunksIngested += batch.length;
   }
 
-  return { lawName, chunksIngested };
+  return { lawName: canonical, chunksIngested };
 }
 
 /** Cosine similarity search against stored legal embeddings. */

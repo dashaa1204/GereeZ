@@ -47,4 +47,8 @@ npm run ingest:legal -- "knowledge-base/your-file.pdf"
 
 - Use clean, article-structured source text for best chunking
 - Re-ingesting replaces existing chunks for the same `lawName` by default
+- `lawName` must be a law the app knows — `Иргэний хууль` or `Хөдөлмөрийн тухай
+  хууль` (see `LAW_NAME_BY_CONTRACT_TYPE`). Retrieval filters on that exact
+  string, so anything else is refused rather than ingested unread; recognisable
+  variants (spacing, case, a trailing English gloss) fold to it automatically
 - After ingesting 100+ chunks, the IVFFlat index in Supabase will perform better
